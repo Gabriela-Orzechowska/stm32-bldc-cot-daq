@@ -28,6 +28,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "application.h"
+#include "tusb.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -99,13 +100,20 @@ int main(void)
   MX_LPUART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  application_entry();
+
+	tusb_rhport_init_t dev_init = {
+		  .role = TUSB_ROLE_DEVICE,
+		  .speed = TUSB_SPEED_FULL,
+	};
+	tusb_init(0, &dev_init);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  tud_task();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

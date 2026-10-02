@@ -1,7 +1,0 @@
-../App/application.c:18:6:application_entry	1
-../App/application.c:24:13:application_init	2
-../App/application.c:41:13:application_loop	5
-../App/application.c:65:13:application_process_buffer	2
-../App/application.c:80:13:interrupt_dma_complete_half	7
-../App/application.c:89:13:interrupt_dma_complete_full	7
-../App/application.c:98:13:interrupt_init	1

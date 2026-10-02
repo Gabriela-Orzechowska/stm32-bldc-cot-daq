@@ -27,7 +27,7 @@ static void application_init(void) {
 	// Initialize USB
 	tusb_rhport_init_t dev_init = {
 		  .role = TUSB_ROLE_DEVICE,
-		  .speed = TUSB_SPEED_AUTO,
+		  .speed = TUSB_SPEED_FULL,
 	};
 	tusb_init(0, &dev_init);
 
@@ -40,6 +40,7 @@ static void application_init(void) {
 
 static void application_loop(void) {
 	// Process timer packets
+	/*
 	for(int i = 0; i < ENCODER_CHANNEL_COUNT; i++) {
 		uint8_t has_data = 0;
 		if (s_buffer_ready_half[i] == 1) {
@@ -54,10 +55,9 @@ static void application_loop(void) {
 		}
 
 		if (has_data == 1) {
-			tud_vendor_write(&s_packet_timer[i], sizeof(payload_timer_delta_t));
-			tud_vendor_write_flush();
 		}
 	}
+	*/
 
 	tud_task();
 }
@@ -96,9 +96,11 @@ static void interrupt_dma_complete_full(TIM_HandleTypeDef* htim) {
 	}
 }
 static void interrupt_init(void) {
+	/*
 	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_HALF_CB_ID, interrupt_dma_complete_half);
 	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_CB_ID, interrupt_dma_complete_full);
 
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_IC_CAPTURE_HALF_CB_ID, interrupt_dma_complete_half);
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_IC_CAPTURE_CB_ID, interrupt_dma_complete_full);
+	*/
 }
