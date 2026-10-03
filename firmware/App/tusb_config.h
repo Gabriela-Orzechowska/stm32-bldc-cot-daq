@@ -11,7 +11,7 @@
 #define CFG_TUD_ENABLED 1
 #define CFG_TUD_VENDOR               1
 #define CFG_TUD_VENDOR_RX_BUFSIZE    64
-#define CFG_TUD_VENDOR_TX_BUFSIZE    64
+#define CFG_TUD_VENDOR_TX_BUFSIZE    (4096 * 2)
 
 #define CFG_TUD_ENDPOINT0_SIZE 64
 

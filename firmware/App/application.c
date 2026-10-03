@@ -21,13 +21,10 @@ void application_entry(void) {
 }
 
 static void interrupt_init(void);
-static void application_init(void) {
-	interrupt_init();
-
-	// Initialize USB
+static void usb_init(void) {
 	tusb_rhport_init_t dev_init = {
-		  .role = TUSB_ROLE_DEVICE,
-		  .speed = TUSB_SPEED_FULL,
+			  .role = TUSB_ROLE_DEVICE,
+			  .speed = TUSB_SPEED_FULL,
 	};
 	tusb_init(0, &dev_init);
 
@@ -38,10 +35,23 @@ static void application_init(void) {
 	}
 }
 
+static void timer_init(void) {
+	HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, s_buffer_timer[0], DMA_BUFFER_SIZE);
+	HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, s_buffer_timer[1], DMA_BUFFER_SIZE);
+	HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_1, s_buffer_timer[2], DMA_BUFFER_SIZE);
+	HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_2, s_buffer_timer[3], DMA_BUFFER_SIZE);
+
+}
+
+static void application_init(void) {
+	interrupt_init();
+	usb_init();
+	timer_init();
+}
+
 static void application_loop(void) {
 	// Process timer packets
-	/*
-	for(int i = 0; i < ENCODER_CHANNEL_COUNT; i++) {
+	for(int i = 0; i < 1; i++) {
 		uint8_t has_data = 0;
 		if (s_buffer_ready_half[i] == 1) {
 			application_process_buffer(s_buffer_timer[i], s_packet_timer[i].deltas, i, DMA_HALF_BUFFER_SIZE);
@@ -55,9 +65,10 @@ static void application_loop(void) {
 		}
 
 		if (has_data == 1) {
+			tud_vendor_write(&s_packet_timer[i], sizeof(payload_timer_delta_t));
+			tud_vendor_write_flush();
 		}
 	}
-	*/
 
 	tud_task();
 }
@@ -96,11 +107,9 @@ static void interrupt_dma_complete_full(TIM_HandleTypeDef* htim) {
 	}
 }
 static void interrupt_init(void) {
-	/*
 	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_HALF_CB_ID, interrupt_dma_complete_half);
 	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_CB_ID, interrupt_dma_complete_full);
 
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_IC_CAPTURE_HALF_CB_ID, interrupt_dma_complete_half);
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_IC_CAPTURE_CB_ID, interrupt_dma_complete_full);
-	*/
 }

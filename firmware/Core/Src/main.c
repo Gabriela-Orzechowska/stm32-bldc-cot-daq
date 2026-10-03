@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "adc.h"
 #include "dma.h"
 #include "usart.h"
 #include "tim.h"
@@ -96,24 +95,16 @@ int main(void)
   MX_USB_PCD_Init();
   MX_TIM2_Init();
   MX_TIM5_Init();
-  MX_ADC1_Init();
   MX_LPUART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-
-	tusb_rhport_init_t dev_init = {
-		  .role = TUSB_ROLE_DEVICE,
-		  .speed = TUSB_SPEED_FULL,
-	};
-	tusb_init(0, &dev_init);
-
+  application_entry();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  tud_task();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
