@@ -3,17 +3,17 @@
 #include "tim.h"
 #include "crc.h"
 #include "tusb.h"
+#include "stm32g4xx.h"
+#include "packet.h"
 
-static volatile bool s_buffer_ready_half[ENCODER_CHANNEL_COUNT] = {0};
-static volatile bool s_buffer_ready_full[ENCODER_CHANNEL_COUNT] = {0};
-static uint32_t s_buffer_timer[ENCODER_CHANNEL_COUNT][DMA_BUFFER_SIZE] = {0};
-static uint32_t s_last_capture[ENCODER_CHANNEL_COUNT] = {0};
-
-static payload_timer_delta_t s_packet_timer[ENCODER_CHANNEL_COUNT] = {0};
+static volatile bool s_buffer_ready_half = {0};
+static volatile bool s_buffer_ready_full = {0};
+static uint32_t s_buffer_timer[DMA_BUFFER_SIZE] = {0};
+static uint32_t s_last_capture = {0};
+static packet_timer_delta_t s_packet_timer = {0};
 
 static void application_init(void);
 static void application_loop(void);
-static void payload_timer_process(payload_timer_delta_t* packet, const uint32_t* buffer, encoder_channel_t channel);
 
 void application_entry(void) {
 	application_init();
@@ -28,92 +28,81 @@ static void usb_init(void) {
 	};
 	tusb_init(0, &dev_init);
 
-	// Initialize PC Packets
-	for(int i = 0; i < ENCODER_CHANNEL_COUNT; i++) {
-		s_packet_timer[i].header.magic 		= 0x55AA;
-		s_packet_timer[i].header.length 	= sizeof(s_packet_timer[i].deltas);
-		s_packet_timer[i].header.type 		= PACKET_TYPE_ENCODER_DELTA;
-		s_packet_timer[i].header.subtype	= i;
-	}
+	packet_timer_delta_init(&s_packet_timer);
 }
 
-static void timer_init(void) {
-	HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, s_buffer_timer[0], DMA_BUFFER_SIZE);
-	HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_2, s_buffer_timer[1], DMA_BUFFER_SIZE);
-	HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_1, s_buffer_timer[2], DMA_BUFFER_SIZE);
-	HAL_TIM_IC_Start_DMA(&htim5, TIM_CHANNEL_2, s_buffer_timer[3], DMA_BUFFER_SIZE);
-}
+static void timer_init(encoder_capture_mode_t mode, encoder_channel_t channel);
 
 static void application_init(void) {
 	interrupt_init();
 	usb_init();
-	timer_init();
+	timer_init(ENCODER_CAPTURE_XOR, ENCODER_CHANNEL_A);
 }
 
 static void application_loop(void) {
 	// Process timer packets
-	for(int i = 0; i < 1; i++) {
-		bool has_data = false;
-		if (s_buffer_ready_half[i]) {
-			payload_timer_process(&s_packet_timer[i], s_buffer_timer[i], i);
-			s_buffer_ready_half[i] = false;
-			has_data = true;
-		}
-		if (s_buffer_ready_full[i]) {
-			payload_timer_process(&s_packet_timer[i], &s_buffer_timer[i][DMA_HALF_BUFFER_SIZE], i);
-			s_buffer_ready_full[i] = false;
-			has_data = true;
-		}
+	bool has_data = false;
+	if (s_buffer_ready_half) {
+		packet_timer_delta_fill(&s_packet_timer, s_buffer_timer, &s_last_capture);
+		s_buffer_ready_half = false;
+		has_data = true;
+	}
+	if (s_buffer_ready_full) {
+		packet_timer_delta_fill(&s_packet_timer, &s_buffer_timer[DMA_HALF_BUFFER_SIZE], &s_last_capture);
+		s_buffer_ready_full = false;
+		has_data = true;
+	}
 
-		if (has_data) {
-			tud_vendor_write(&s_packet_timer[i], sizeof(payload_timer_delta_t));
-			tud_vendor_write_flush();
-			tud_task();
-		}
+	if (has_data) {
+		tud_vendor_write(&s_packet_timer, sizeof(packet_timer_delta_t));
+		tud_vendor_write_flush();
 	}
 
 	tud_task();
 }
 
-static void payload_timer_process(payload_timer_delta_t* packet, const uint32_t* buffer, encoder_channel_t channel) {
-	uint32_t last_capture = s_last_capture[channel];
-
-	for(size_t i = 0; i < DMA_HALF_BUFFER_SIZE; i++) {
-		uint32_t current = buffer[i];
-		uint32_t delta = current - last_capture;
-
-		last_capture = current;
-		packet->deltas[i] = delta;
-	}
-	packet->crc = 0;
-	packet->crc = HAL_CRC_Calculate(&hcrc, (const uint32_t*) packet, sizeof(payload_timer_delta_t));
-
-	s_last_capture[channel] = last_capture;
-}
-
 
 static void interrupt_dma_complete_half(TIM_HandleTypeDef* htim) {
-	if (htim->Instance == TIM2) {
-		if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) s_buffer_ready_half[ENCODER_A_RISING] = true;
-		else if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) s_buffer_ready_half[ENCODER_A_FALLING] = true;
-	} else if (htim->Instance == TIM5) {
-		if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) s_buffer_ready_half[ENCODER_B_RISING] = true;
-		else if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) s_buffer_ready_half[ENCODER_B_FALLING] = true;
-	}
+	s_buffer_ready_half = true;
 }
 static void interrupt_dma_complete_full(TIM_HandleTypeDef* htim) {
-	if (htim->Instance == TIM2) {
-		if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) s_buffer_ready_full[ENCODER_A_RISING] = true;
-		else if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) s_buffer_ready_full[ENCODER_A_FALLING] = true;
-	} else if (htim->Instance == TIM5) {
-		if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) s_buffer_ready_full[ENCODER_B_RISING] = true;
-		else if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2) s_buffer_ready_full[ENCODER_B_FALLING] = true;
-	}
+	s_buffer_ready_full = true;
 }
 static void interrupt_init(void) {
 	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_HALF_CB_ID, interrupt_dma_complete_half);
 	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_CB_ID, interrupt_dma_complete_full);
+}
 
-	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_IC_CAPTURE_HALF_CB_ID, interrupt_dma_complete_half);
-	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_IC_CAPTURE_CB_ID, interrupt_dma_complete_full);
+static void timer_init(encoder_capture_mode_t mode, encoder_channel_t channel) {
+	HAL_TIM_IC_Stop_DMA(&htim2, TIM_CHANNEL_1);
+
+	CLEAR_BIT(TIM2->CCER, TIM_CCER_CC1E);
+	CLEAR_BIT(TIM2->CR2, TIM_CR2_TI1S);
+
+	switch(mode) {
+	case ENCODER_CAPTURE_ONE:
+	case ENCODER_CAPTURE_BOTH:
+		if (channel == ENCODER_CHANNEL_A)
+			MODIFY_REG(TIM2->CCMR1, TIM_CCMR1_CC1S, TIM_CCMR1_CC1S_0);
+		else
+			MODIFY_REG(TIM2->CCMR1, TIM_CCMR1_CC1S, TIM_CCMR1_CC1S_1);
+		break;
+	case ENCODER_CAPTURE_XOR:
+		MODIFY_REG(TIM2->CCMR1, TIM_CCMR1_CC1S, TIM_CCMR1_CC1S_0);
+		SET_BIT(TIM2->CR2, TIM_CR2_TI1S);
+		break;
+	default:
+		return;
+	}
+
+	if (mode == ENCODER_CAPTURE_ONE) {
+		CLEAR_BIT(TIM2->CCER, TIM_CCER_CC1P | TIM_CCER_CC1NP);
+	}
+	else {
+		SET_BIT(TIM2->CCER, TIM_CCER_CC1P | TIM_CCER_CC1NP);
+	}
+
+	WRITE_REG(TIM2->SR, ~TIM_SR_CC1IF);
+	SET_BIT(TIM2->CCER, TIM_CCER_CC1E);
+	HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, s_buffer_timer, DMA_BUFFER_SIZE);
 }

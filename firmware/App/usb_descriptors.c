@@ -59,9 +59,9 @@ enum
     STRID_SERIAL
 };
 
-const char* string_desc_arr[] =
+static const char* string_desc_arr[] =
 {
-    (const char[]) { 0x09, 0x04 }, // English
+    NULL,
     "STM32",
     "STM32G474 COT DAQ",
     "000001"
