@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "crc.h"
 #include "dma.h"
 #include "usart.h"
 #include "tim.h"
@@ -96,6 +97,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM5_Init();
   MX_LPUART1_UART_Init();
+  MX_CRC_Init();
   /* USER CODE BEGIN 2 */
 
   application_entry();
