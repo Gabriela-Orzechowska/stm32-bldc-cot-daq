@@ -5,6 +5,7 @@
 #include "tusb.h"
 #include "stm32g4xx.h"
 #include "packet.h"
+#include "config.h"
 
 static volatile bool s_buffer_ready_half = {0};
 static volatile bool s_buffer_ready_full = {0};
@@ -36,7 +37,8 @@ static void timer_init(encoder_capture_mode_t mode, encoder_channel_t channel);
 static void application_init(void) {
 	interrupt_init();
 	usb_init();
-	timer_init(ENCODER_CAPTURE_XOR, ENCODER_CHANNEL_A);
+	config_init();
+	timer_init(g_config.encoder_mode, g_config.encoder_channel);
 }
 
 static void application_loop(void) {
