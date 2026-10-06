@@ -108,6 +108,8 @@ target_link_libraries(implot PUBLIC imgui)
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/renderer/imgui_render.cpp
+    src/usb/usb_device.cpp
+    src/usb/usb_reader.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

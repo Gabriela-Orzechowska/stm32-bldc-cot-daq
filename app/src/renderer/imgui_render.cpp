@@ -1,6 +1,8 @@
 #include "imgui_render.hpp"
+#include <iostream>
 
 namespace Render {
+
 void ImGuiManager::Init() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -10,6 +12,19 @@ void ImGuiManager::Init() {
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     ImGui::StyleColorsDark();
+
+    this->m_device = new USB::Device(0xCAFE, 0x4006, 0x81);
+
+    this->m_device->SetConnectCallback([](){ 
+        ImGuiManager::Get().m_isConnected = true;
+    });
+    this->m_device->SetDisconnectCallback([](){ 
+        ImGuiManager::Get().m_isConnected = false;
+    });
+
+    this->m_device->Start([](const void*, size_t size){
+        std::printf("Received %zu bytes\n", size);
+    });
 }
 
 void ImGuiManager::Update() {
@@ -40,7 +55,7 @@ void ImGuiManager::RenderDeviceBar() {
         ImGuiWindowFlags_NoScrollbar
     );
 
-    ImGui::Button("Test");
+    ImGui::Text("STM32 COT DAQ Device: %s", this->m_isConnected ? "Connected" : "Not found");
 
     ImGui::End();
 }

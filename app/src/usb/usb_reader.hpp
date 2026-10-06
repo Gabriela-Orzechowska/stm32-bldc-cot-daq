@@ -18,6 +18,7 @@ public:
     Reader(const Reader&) = delete;
     Reader& operator=(const Reader&) = delete;
 
+    inline bool IsRunning() const { return m_running; }
     inline int GetError() const { return m_error; }
     bool Start(libusb_device_handle *handle, uint8_t endpoint, DataCallback callback = nullptr);
     void Stop();
