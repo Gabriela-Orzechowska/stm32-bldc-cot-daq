@@ -13,16 +13,16 @@ static uint32_t s_buffer_timer[DMA_BUFFER_SIZE] = {0};
 static uint32_t s_last_capture = {0};
 static packet_timer_delta_t s_packet_timer = {0};
 
-static void application_init(void);
-static void application_loop(void);
+static void _application_init(void);
+static void _application_loop(void);
 
 void application_entry(void) {
-	application_init();
-	for(;;) application_loop();
+	_application_init();
+	for(;;) _application_loop();
 }
-
-static void interrupt_init(void);
-static void usb_init(void) {
+static void _packet_receive(packet_type_t type, const void* data, size_t size);
+static void _interrupt_init(void);
+static void _usb_init(void) {
 	tusb_rhport_init_t dev_init = {
 			  .role = TUSB_ROLE_DEVICE,
 			  .speed = TUSB_SPEED_FULL,
@@ -32,16 +32,20 @@ static void usb_init(void) {
 	packet_timer_delta_init(&s_packet_timer);
 }
 
-static void timer_init(encoder_capture_mode_t mode, encoder_channel_t channel);
+static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel);
 
-static void application_init(void) {
-	interrupt_init();
-	usb_init();
+static void _application_init(void) {
+	_interrupt_init();
+	_usb_init();
+	packet_init(_packet_receive);
+
 	config_init();
-	timer_init(g_config.encoder_mode, g_config.encoder_channel);
+	_timer_init(g_config.encoder_mode, g_config.encoder_channel);
+
+
 }
 
-static void application_loop(void) {
+static void _application_loop(void) {
 	// Process timer packets
 	bool has_data = false;
 	if (s_buffer_ready_half) {
@@ -63,19 +67,34 @@ static void application_loop(void) {
 	tud_task();
 }
 
+static void _packet_receive(packet_type_t type, const void* data, size_t size) {
+	if (type == PACKET_TYPE_CONFIG_REQUEST) {
+		if (size < sizeof(packet_simple_t)) return;
+		const packet_simple_t* packet = (const packet_simple_t*) data;
 
-static void interrupt_dma_complete_half(TIM_HandleTypeDef* htim) {
+		if (packet->crc != HAL_CRC_Calculate(&hcrc, (const uint32_t*) packet, PACKET_RAW_SIZE(packet_simple_t)))
+			return;
+
+		packet_config_t config_packet;
+		packet_config_init(&config_packet);
+
+		tud_vendor_write(&config_packet, sizeof(config_packet));
+		tud_vendor_write_flush();
+	}
+}
+
+static void _interrupt_dma_complete_half(TIM_HandleTypeDef* htim) {
 	s_buffer_ready_half = true;
 }
-static void interrupt_dma_complete_full(TIM_HandleTypeDef* htim) {
+static void _interrupt_dma_complete_full(TIM_HandleTypeDef* htim) {
 	s_buffer_ready_full = true;
 }
-static void interrupt_init(void) {
-	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_HALF_CB_ID, interrupt_dma_complete_half);
-	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_CB_ID, interrupt_dma_complete_full);
+static void _interrupt_init(void) {
+	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_HALF_CB_ID, _interrupt_dma_complete_half);
+	HAL_TIM_RegisterCallback(&htim2, HAL_TIM_IC_CAPTURE_CB_ID, _interrupt_dma_complete_full);
 }
 
-static void timer_init(encoder_capture_mode_t mode, encoder_channel_t channel) {
+static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel) {
 	HAL_TIM_IC_Stop_DMA(&htim2, TIM_CHANNEL_1);
 
 	CLEAR_BIT(TIM2->CCER, TIM_CCER_CC1E);
