@@ -24,7 +24,7 @@ void packet_timer_delta_fill(packet_timer_delta_t* packet, const uint32_t* data,
 
 void packet_config_init(packet_config_t *packet) {
 	packet->header.magic = PACKET_HEADER_MAGIC;
-	packet->header.length = sizeof(packet_timer_delta_t);
+	packet->header.length = sizeof(packet_config_t);
 	packet->header.type = PACKET_TYPE_CONFIG;
 
 	packet->config = g_config;
@@ -56,20 +56,18 @@ void tud_vendor_rx_cb(uint8_t itf, const uint8_t *buffer, uint32_t bufsize) {
 		for (uint32_t i = 0; i < count;) {
 			switch(s_packet_process) {
 			case PACKET_PROCESS_WAIT_MAGIC:
-				if (i == (count - 2)) break;
+				if (i >= (count - 2)) return;
 				if (*(uint16_t*)&buff[i] == PACKET_HEADER_MAGIC) {
 					s_packet_process = PACKET_PROCESS_READ_HEADER;
 					s_packet_read_length = 0;
-				}
-				i++;
-				break;
+				} else i++;
+				;
 			case PACKET_PROCESS_READ_HEADER:
 				s_packet_read_buffer[s_packet_read_length++] = buff[i++];
 				if (s_packet_read_length >= sizeof(packet_header_t)) {
 					const packet_header_t* header = (const packet_header_t*) s_packet_read_buffer;
 
-					s_packet_read_length 		= 0;
-					s_packet_expected_length 	= header->length - sizeof(packet_header_t);
+					s_packet_expected_length 	= header->length;
 					s_packet_type 				= header->type;
 					s_packet_process 			= PACKET_PROCESS_READ_PAYLOAD;
 

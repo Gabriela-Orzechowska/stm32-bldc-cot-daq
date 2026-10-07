@@ -72,7 +72,8 @@ static void _packet_receive(packet_type_t type, const void* data, size_t size) {
 		if (size < sizeof(packet_simple_t)) return;
 		const packet_simple_t* packet = (const packet_simple_t*) data;
 
-		if (packet->crc != HAL_CRC_Calculate(&hcrc, (const uint32_t*) packet, PACKET_RAW_SIZE(packet_simple_t)))
+		uint32_t calculatedCRC = HAL_CRC_Calculate(&hcrc, (const uint32_t*) packet, PACKET_RAW_SIZE(packet_simple_t));
+		if (packet->crc != calculatedCRC)
 			return;
 
 		packet_config_t config_packet;
@@ -80,6 +81,19 @@ static void _packet_receive(packet_type_t type, const void* data, size_t size) {
 
 		tud_vendor_write(&config_packet, sizeof(config_packet));
 		tud_vendor_write_flush();
+	}
+	else if (type == PACKET_TYPE_CONFIG) {
+		if (size < sizeof(packet_config_t)) return;
+		const packet_config_t* packet = (const packet_config_t*) data;
+
+		uint32_t calculatedCRC = HAL_CRC_Calculate(&hcrc, (const uint32_t*) packet, PACKET_RAW_SIZE(packet_config_t));
+		if (packet->crc != calculatedCRC)
+			return;
+
+		g_config = packet->config;
+		config_save();
+
+		NVIC_SystemReset();
 	}
 }
 
