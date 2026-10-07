@@ -77,6 +77,20 @@ void Device::CloseDevice() {
     }
 }
 
+bool Device::SendData(const void* data, size_t size) {
+    if (!this->m_device) return false;
+
+    int transferred = 0;
+
+    if (libusb_bulk_transfer(
+        this->m_device, this->m_sendEndpoint, (uint8_t*) data, size, &transferred, 100
+    )) {
+        return false;
+    }
+
+    return transferred == size;
+}
+
 void Device::ThreadTask() {
     while (this->m_isRunning) {
 

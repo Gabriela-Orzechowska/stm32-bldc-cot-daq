@@ -1,7 +1,11 @@
 #include "imgui_render.hpp"
 #include <iostream>
+#include "../common/packet.h"
+#include <vendor/crc.h>
+#include <usb/usb_manager.hpp>
 
 namespace Render {
+
 
 void ImGuiManager::Init() {
     IMGUI_CHECKVERSION();
@@ -12,19 +16,6 @@ void ImGuiManager::Init() {
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     ImGui::StyleColorsDark();
-
-    this->m_device = new USB::Device(0xCAFE, 0x4006, 0x81);
-
-    this->m_device->SetConnectCallback([](){ 
-        ImGuiManager::Get().m_isConnected = true;
-    });
-    this->m_device->SetDisconnectCallback([](){ 
-        ImGuiManager::Get().m_isConnected = false;
-    });
-
-    this->m_device->Start([](const void*, size_t size){
-        std::printf("Received %zu bytes\n", size);
-    });
 }
 
 void ImGuiManager::Update() {
@@ -55,7 +46,32 @@ void ImGuiManager::RenderDeviceBar() {
         ImGuiWindowFlags_NoScrollbar
     );
 
-    ImGui::Text("STM32 COT DAQ Device: %s", this->m_isConnected ? "Connected" : "Not found");
+    ImGui::Text("STM32 COT DAQ: %s", USB::Manager::Get().IsConnected() ? "Podłączone" : "Nie Podłączone");
+
+    if (USB::Manager::Get().IsConnected()) {
+        config_t& config = USB::Manager::Get().GetConfig();
+        int configResolution    = config.encoder_resolution;
+        int configMode          = config.encoder_mode;
+        int configChannel       = config.encoder_channel;
+
+        ImGui::PushItemWidth(140.0f);
+        ImGui::InputInt("Rozdzielczość enkodera", &configResolution, 1);
+        ImGui::SameLine();
+        ImGui::Combo("Tryb", &configMode, "Jedno zbocze\0Oba zbocza\0XOR\0\0");
+        if (configMode != 2) {
+            ImGui::SameLine();
+            ImGui::Combo("Kanał", &configChannel, "A\0B\0\0");
+        }
+        config.encoder_resolution   = configResolution;
+        config.encoder_mode         = configMode;
+        config.encoder_channel      = configChannel;
+
+        ImGui::SameLine();
+        ImGui::PopItemWidth();
+        if (ImGui::Button("Zapisz")) {
+            USB::Manager::Get().SendConfig();
+        }
+    }
 
     ImGui::End();
 }

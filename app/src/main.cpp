@@ -9,6 +9,7 @@
 #include "implot.h"
 
 #include "renderer/imgui_render.hpp"
+#include "usb/usb_manager.hpp"
 
 int main() {
     if (!glfwInit()) return 1;
@@ -28,6 +29,7 @@ int main() {
     glfwSwapInterval(1);  // VSync
 
     Render::ImGuiManager::Get().Init();
+    USB::Manager::Get().Init();
 
     ImPlot::CreateContext();
 
@@ -58,6 +60,7 @@ int main() {
 
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
+    USB::Manager::Get().Deinit();
 
     glfwDestroyWindow(window);
     glfwTerminate();

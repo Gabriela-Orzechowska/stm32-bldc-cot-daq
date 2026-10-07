@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(COTDAQ VERSION 1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -105,11 +105,16 @@ target_include_directories(implot PUBLIC
 )
 target_link_libraries(implot PUBLIC imgui)
 
+include_directories(${PROJECT_NAME}
+    src
+)
+
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/renderer/imgui_render.cpp
     src/usb/usb_device.cpp
     src/usb/usb_reader.cpp
+    src/usb/usb_manager.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -123,7 +128,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Wno-deprecated-enum-enum-conversion)
 endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

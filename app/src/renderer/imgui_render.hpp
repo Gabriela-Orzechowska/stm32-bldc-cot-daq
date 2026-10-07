@@ -21,6 +21,7 @@ public:
 
     void Init();
     void Update();
+    USB::Device *m_device;
     
 protected:
     void BeforeRenderUpdate();
@@ -30,7 +31,6 @@ protected:
 
     void RenderDeviceBar();
 
-    USB::Device *m_device;
     bool m_isConnected = false;
 };
 }
