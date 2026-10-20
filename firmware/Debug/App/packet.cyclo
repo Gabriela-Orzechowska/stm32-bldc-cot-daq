@@ -1,5 +1,0 @@
-../App/packet.c:5:6:packet_timer_delta_init	1
-../App/packet.c:11:6:packet_timer_delta_fill	2
-../App/packet.c:25:6:packet_config_init	1
-../App/packet.c:48:6:tud_vendor_rx_cb	14
-../App/packet.c:96:6:packet_init	1
