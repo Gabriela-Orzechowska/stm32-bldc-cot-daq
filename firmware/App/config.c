@@ -12,7 +12,7 @@ config_t g_config __attribute((aligned(0x40)));
 static void _config_init_default(void) {
 	g_config.magic = CONFIG_MAGIC;
 	g_config.encoder_resolution = 600;
-	g_config.encoder_mode = ENCODER_CAPTURE_XOR;
+	g_config.encoder_mode = ENCODER_CAPTURE_ONE;
 	g_config.encoder_channel = ENCODER_CHANNEL_A;
 
 	config_save();

@@ -11,7 +11,7 @@ static volatile bool s_buffer_ready_half = {0};
 static volatile bool s_buffer_ready_full = {0};
 static uint32_t s_buffer_timer[DMA_BUFFER_SIZE] = {0};
 static uint32_t s_last_capture = {0};
-static packet_timer_delta_t s_packet_timer = {0};
+static uint8_t s_packet_timer[PACKET_TIMER_MINIMAL_SPACE] __attribute((aligned(0x20)));
 
 static void _application_init(void);
 static void _application_loop(void);
@@ -28,8 +28,6 @@ static void _usb_init(void) {
 			  .speed = TUSB_SPEED_FULL,
 	};
 	tusb_init(0, &dev_init);
-
-	packet_timer_delta_init(&s_packet_timer);
 }
 
 static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel);
@@ -48,19 +46,21 @@ static void _application_init(void) {
 static void _application_loop(void) {
 	// Process timer packets
 	bool has_data = false;
+	uint16_t packet_size = 0;
+
 	if (s_buffer_ready_half) {
-		packet_timer_delta_fill(&s_packet_timer, s_buffer_timer, &s_last_capture);
+		packet_size = packet_timer_delta_fill((uint16_t*) s_packet_timer, s_buffer_timer, &s_last_capture);
+		has_data = true;
 		s_buffer_ready_half = false;
-		has_data = true;
 	}
-	if (s_buffer_ready_full) {
-		packet_timer_delta_fill(&s_packet_timer, &s_buffer_timer[DMA_HALF_BUFFER_SIZE], &s_last_capture);
-		s_buffer_ready_full = false;
+	else if (s_buffer_ready_full) {
+		packet_size = packet_timer_delta_fill((uint16_t*)s_packet_timer, &s_buffer_timer[DMA_HALF_BUFFER_SIZE], &s_last_capture);
 		has_data = true;
+		s_buffer_ready_full = false;
 	}
 
 	if (has_data) {
-		tud_vendor_write(&s_packet_timer, sizeof(packet_timer_delta_t));
+		tud_vendor_write(s_packet_timer, packet_size);
 		tud_vendor_write_flush();
 	}
 

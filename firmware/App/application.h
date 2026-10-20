@@ -15,4 +15,4 @@ typedef enum
     ENCODER_CAPTURE_XOR,
 } encoder_capture_mode_t;
 
-void application_entry(void);
+void application_entry(void) __attribute__((noreturn));

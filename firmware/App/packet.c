@@ -2,24 +2,42 @@
 #include "crc.h"
 #include "tusb.h"
 
-void packet_timer_delta_init(packet_timer_delta_t* packet) {
-	packet->header.magic = PACKET_HEADER_MAGIC;
-	packet->header.length = sizeof(packet_timer_delta_t);
-	packet->header.type = PACKET_TYPE_TIMER_DELTA;
-}
+uint16_t packet_timer_delta_fill(uint16_t* packet, const uint32_t* data, uint32_t *last_capture) {
+	uint16_t packet_len = sizeof(packet_simple_t);
 
-void packet_timer_delta_fill(packet_timer_delta_t* packet, const uint32_t* data, uint32_t *last_capture) {
-	uint32_t last = *last_capture;
-	for(size_t i = 0; i < DMA_HALF_BUFFER_SIZE; i++) {
-		uint32_t current = data[i];
-		uint32_t delta = current - last;
+	packet_header_t* header = (packet_header_t*) packet;
+	header->magic	= PACKET_HEADER_MAGIC;
+	// header->length = to be computed
+	header->type	= PACKET_TYPE_TIMER_DELTA;
 
-		last = current;
-		packet->deltas[i] = delta;
+	uint16_t* deltas = packet + (sizeof(packet_header_t) / sizeof(uint16_t));
+	uint16_t* delta_start = deltas;
+
+	uint32_t last_value = *last_capture;
+
+	for (int i = 0; i < DMA_HALF_BUFFER_SIZE; i++) {
+		uint32_t value = data[i];
+		uint32_t difference = value - last_value;
+
+		if (difference >= 0xFFFF) {
+			*deltas++ = 0xFFFF;
+			*deltas++ = (difference >> 16) & 0xFFFF;
+
+		}
+		*deltas++ = difference & 0xFFFF;
+
+		last_value = value;
 	}
-	packet->crc = HAL_CRC_Calculate(&hcrc, (const uint32_t*) packet,
-			PACKET_RAW_SIZE(packet_timer_delta_t));
-	*last_capture = last;
+	*last_capture = last_value;
+
+	packet_len += (deltas - delta_start);
+	header->length = packet_len + sizeof(uint32_t);
+
+	uint32_t crc = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet, packet_len);
+	*deltas++ = (crc >> 16) & 0xFFFF;
+	*deltas++ = (crc >>  0) & 0xFFFF;
+
+	return packet_len + sizeof(uint32_t);
 }
 
 void packet_config_init(packet_config_t *packet) {
@@ -28,7 +46,7 @@ void packet_config_init(packet_config_t *packet) {
 	packet->header.type = PACKET_TYPE_CONFIG;
 
 	packet->config = g_config;
-	packet->crc = HAL_CRC_Calculate(&hcrc, (const uint32_t*) packet,
+	packet->crc = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet,
 			PACKET_RAW_SIZE(packet_config_t));
 }
 
