@@ -14,6 +14,7 @@ void ImGuiManager::Init() {
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.Fonts->AddFontDefaultVector();  // Load embedded scalable font.
 
     ImGui::StyleColorsDark();
 }
@@ -56,17 +57,14 @@ void ImGuiManager::RenderDeviceBar() {
 
         ImGui::PushItemWidth(140.0f);
         ImGui::InputInt("Rozdzielczość enkodera", &configResolution, 1);
-        ImGui::SameLine();
         ImGui::Combo("Tryb", &configMode, "Jedno zbocze\0Oba zbocza\0XOR\0\0");
         if (configMode != 2) {
-            ImGui::SameLine();
             ImGui::Combo("Kanał", &configChannel, "A\0B\0\0");
         }
         config.encoder_resolution   = configResolution;
         config.encoder_mode         = configMode;
         config.encoder_channel      = configChannel;
 
-        ImGui::SameLine();
         ImGui::PopItemWidth();
         if (ImGui::Button("Zapisz")) {
             USB::Manager::Get().SendConfig();

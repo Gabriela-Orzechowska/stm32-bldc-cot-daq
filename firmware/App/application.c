@@ -139,5 +139,6 @@ static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel) 
 
 	WRITE_REG(TIM2->SR, ~TIM_SR_CC1IF);
 	SET_BIT(TIM2->CCER, TIM_CCER_CC1E);
+
 	HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, s_buffer_timer, DMA_BUFFER_SIZE);
 }
