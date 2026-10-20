@@ -63,7 +63,7 @@ static const char* string_desc_arr[] =
 {
     NULL,
     "STM32",
-    "STM32G474 COT DAQ",
+    "STM32H753ZI COT DAQ",
     "000001"
 };
 

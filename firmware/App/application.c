@@ -3,7 +3,7 @@
 #include "tim.h"
 #include "crc.h"
 #include "tusb.h"
-#include "stm32g4xx.h"
+#include "stm32h7xx.h"
 #include "packet.h"
 #include "config.h"
 

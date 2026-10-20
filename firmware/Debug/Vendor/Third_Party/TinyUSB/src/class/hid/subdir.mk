@@ -1,0 +1,30 @@
+################################################################################
+# Automatically-generated file. Do not edit!
+# Toolchain: GNU Tools for STM32 (13.3.rel1)
+################################################################################
+
+# Add inputs and outputs from these tool invocations to the build variables 
+C_SRCS += \
+../Vendor/Third_Party/TinyUSB/src/class/hid/hid_device.c \
+../Vendor/Third_Party/TinyUSB/src/class/hid/hid_host.c 
+
+OBJS += \
+./Vendor/Third_Party/TinyUSB/src/class/hid/hid_device.o \
+./Vendor/Third_Party/TinyUSB/src/class/hid/hid_host.o 
+
+C_DEPS += \
+./Vendor/Third_Party/TinyUSB/src/class/hid/hid_device.d \
+./Vendor/Third_Party/TinyUSB/src/class/hid/hid_host.d 
+
+
+# Each subdirectory must supply rules for building sources it contributes
+Vendor/Third_Party/TinyUSB/src/class/hid/%.o Vendor/Third_Party/TinyUSB/src/class/hid/%.su Vendor/Third_Party/TinyUSB/src/class/hid/%.cyclo: ../Vendor/Third_Party/TinyUSB/src/class/hid/%.c Vendor/Third_Party/TinyUSB/src/class/hid/subdir.mk
+	arm-none-eabi-gcc "$<" -mcpu=cortex-m7 -std=gnu17 -g3 -DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H753xx -c -I../Core/Inc -I../Drivers/STM32H7xx_HAL_Driver/Inc -I../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I../Drivers/CMSIS/Include -I.././Vendor/Third_Party/TinyUSB/src -I../App -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -o "$@"
+
+clean: clean-Vendor-2f-Third_Party-2f-TinyUSB-2f-src-2f-class-2f-hid
+
+clean-Vendor-2f-Third_Party-2f-TinyUSB-2f-src-2f-class-2f-hid:
+	-$(RM) ./Vendor/Third_Party/TinyUSB/src/class/hid/hid_device.cyclo ./Vendor/Third_Party/TinyUSB/src/class/hid/hid_device.d ./Vendor/Third_Party/TinyUSB/src/class/hid/hid_device.o ./Vendor/Third_Party/TinyUSB/src/class/hid/hid_device.su ./Vendor/Third_Party/TinyUSB/src/class/hid/hid_host.cyclo ./Vendor/Third_Party/TinyUSB/src/class/hid/hid_host.d ./Vendor/Third_Party/TinyUSB/src/class/hid/hid_host.o ./Vendor/Third_Party/TinyUSB/src/class/hid/hid_host.su
+
+.PHONY: clean-Vendor-2f-Third_Party-2f-TinyUSB-2f-src-2f-class-2f-hid
+

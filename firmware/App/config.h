@@ -14,6 +14,7 @@ typedef struct {
 
 	uint32_t crc;
 } config_t;
+_Static_assert((sizeof(config_t) % 4) == 0);
 
 extern config_t g_config;
 
