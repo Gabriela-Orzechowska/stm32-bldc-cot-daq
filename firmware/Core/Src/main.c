@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "bdma.h"
 #include "crc.h"
 #include "dma.h"
 #include "lwip.h"
@@ -104,10 +106,13 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
+  MX_BDMA_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_TIM2_Init();
-  MX_CRC_Init();
   MX_LWIP_Init();
+  MX_ADC3_Init();
+  MX_TIM3_Init();
+  MX_CRC_Init();
   /* USER CODE BEGIN 2 */
 
   application_entry();

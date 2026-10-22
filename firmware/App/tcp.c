@@ -114,6 +114,6 @@ static void _server_error(void *arg, err_t err)
 }
 
 static void _server_process_data(const void* data, size_t size) {
-	(void)data;
-	(void)size;
+	if (s_server_recv_callback)
+		s_server_recv_callback(data, size);
 }

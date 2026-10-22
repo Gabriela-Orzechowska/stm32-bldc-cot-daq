@@ -42,6 +42,9 @@ static void _application_client_connect(void) {
 
 	server_send_data(&packet, sizeof(packet));
 }
+static void _application_client_data_receive(const void* data, size_t size) {
+	packet_process_data(data, size);
+}
 
 static void _application_init(void) {
 	_interrupt_init();
@@ -53,6 +56,7 @@ static void _application_init(void) {
 
 	server_init();
 	server_set_on_connect_callback(_application_client_connect);
+	server_set_recv_callback(_application_client_data_receive);
 }
 
 static void _application_loop(void) {
@@ -82,21 +86,7 @@ static void _application_loop(void) {
 }
 
 static void _packet_receive(packet_type_t type, const void* data, size_t size) {
-	if (type == PACKET_TYPE_CONFIG_REQUEST) {
-		if (size < sizeof(packet_simple_t)) return;
-		const packet_simple_t* packet = (const packet_simple_t*) data;
-
-		uint32_t calculatedCRC = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet, PACKET_RAW_SIZE(packet_simple_t));
-		if (packet->crc != calculatedCRC)
-			return;
-
-		packet_config_t config_packet;
-		packet_config_init(&config_packet);
-
-		tud_vendor_write(&config_packet, sizeof(config_packet));
-		tud_vendor_write_flush();
-	}
-	else if (type == PACKET_TYPE_CONFIG) {
+	if (type == PACKET_TYPE_CONFIG) {
 		if (size < sizeof(packet_config_t)) return;
 		const packet_config_t* packet = (const packet_config_t*) data;
 
