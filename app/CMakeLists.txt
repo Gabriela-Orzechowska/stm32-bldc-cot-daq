@@ -38,40 +38,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(implot)
 
-# libusb (why is it so annoyingg)
-if (WIN32)
-    set(LIBUSB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    set(LIBUSB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(LIBUSB_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-
-    FetchContent_Declare(
-        libusb
-        GIT_REPOSITORY https://github.com/libusb/libusb.git
-        GIT_TAG v1.0.29
-        GIT_SHALLOW TRUE
-    )
-
-    FetchContent_MakeAvailable(libusb)
-
-    # libusb's CMake target can differ between versions.
-    if (TARGET usb-1.0)
-        set(LIBUSB_TARGET usb-1.0)
-    elseif (TARGET libusb)
-        set(LIBUSB_TARGET libusb)
-    elseif (TARGET libusb-1.0)
-        set(LIBUSB_TARGET libusb-1.0)
-    else()
-        message(FATAL_ERROR
-            "Could not find a libusb CMake target."
-        )
-    endif()
-
-else()
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0)
-    set(LIBUSB_TARGET PkgConfig::LIBUSB)
-
-endif()
+# Boost::Asio
+FetchContent_Declare(
+  asiocmake
+  GIT_REPOSITORY "https://github.com/OlivierLDff/asio.cmake"
+  GIT_TAG        "main"
+)
+FetchContent_MakeAvailable(asiocmake)
 
 find_package(OpenGL REQUIRED)
 
@@ -112,9 +85,6 @@ include_directories(${PROJECT_NAME}
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/renderer/imgui_render.cpp
-    src/usb/usb_device.cpp
-    src/usb/usb_reader.cpp
-    src/usb/usb_manager.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -122,6 +92,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     imgui
     glfw
     OpenGL::GL
+    asio::asio
     ${LIBUSB_TARGET}
 )
 

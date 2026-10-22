@@ -2,7 +2,6 @@
 #include <iostream>
 #include "../common/packet.h"
 #include <vendor/crc.h>
-#include <usb/usb_manager.hpp>
 
 namespace Render {
 
@@ -47,8 +46,9 @@ void ImGuiManager::RenderDeviceBar() {
         ImGuiWindowFlags_NoScrollbar
     );
 
-    ImGui::Text("STM32 COT DAQ: %s", USB::Manager::Get().IsConnected() ? "Podłączone" : "Nie Podłączone");
+    ImGui::Text("STM32 COT DAQ: Disconnected");
 
+    /*
     if (USB::Manager::Get().IsConnected()) {
         config_t& config = USB::Manager::Get().GetConfig();
         int configResolution    = config.encoder_resolution;
@@ -70,6 +70,7 @@ void ImGuiManager::RenderDeviceBar() {
             USB::Manager::Get().SendConfig();
         }
     }
+    */
 
     ImGui::End();
 }
