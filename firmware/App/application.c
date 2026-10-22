@@ -6,12 +6,16 @@
 #include "stm32h7xx.h"
 #include "packet.h"
 #include "config.h"
+#include "lwip.h"
+#include "tcp.h"
 
 static volatile bool s_buffer_ready_half = {0};
 static volatile bool s_buffer_ready_full = {0};
-static uint32_t s_buffer_timer[DMA_BUFFER_SIZE] = {0};
+
+ALIGN_NO_CACHE static uint32_t s_buffer_timer[DMA_BUFFER_SIZE] = {0};
+
 static uint32_t s_last_capture = {0};
-static uint8_t s_packet_timer[PACKET_TIMER_MINIMAL_SPACE] __attribute((aligned(0x20)));
+static uint8_t s_packet_timer[PACKET_TIMER_MINIMAL_SPACE];
 
 static void _application_init(void);
 static void _application_loop(void);
@@ -32,6 +36,13 @@ static void _usb_init(void) {
 
 static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel);
 
+static void _application_client_connect(void) {
+	packet_config_t packet;
+	packet_config_init(&packet);
+
+	server_send_data(&packet, sizeof(packet));
+}
+
 static void _application_init(void) {
 	_interrupt_init();
 	_usb_init();
@@ -40,7 +51,8 @@ static void _application_init(void) {
 	config_init();
 	_timer_init(g_config.encoder_mode, g_config.encoder_channel);
 
-
+	server_init();
+	server_set_on_connect_callback(_application_client_connect);
 }
 
 static void _application_loop(void) {
@@ -48,7 +60,10 @@ static void _application_loop(void) {
 	bool has_data = false;
 	uint16_t packet_size = 0;
 
+	MX_LWIP_Process();
+	/*
 	if (s_buffer_ready_half) {
+		SCB_CleanInvalidateDCache_by_Addr(s_buffer_timer, sizeof(s_buffer_timer) / 2);
 		packet_size = packet_timer_delta_fill((uint16_t*) s_packet_timer, s_buffer_timer, &s_last_capture);
 		has_data = true;
 		s_buffer_ready_half = false;
@@ -63,8 +78,7 @@ static void _application_loop(void) {
 		tud_vendor_write(s_packet_timer, packet_size);
 		tud_vendor_write_flush();
 	}
-
-	tud_task();
+	*/
 }
 
 static void _packet_receive(packet_type_t type, const void* data, size_t size) {
@@ -72,7 +86,7 @@ static void _packet_receive(packet_type_t type, const void* data, size_t size) {
 		if (size < sizeof(packet_simple_t)) return;
 		const packet_simple_t* packet = (const packet_simple_t*) data;
 
-		uint32_t calculatedCRC = HAL_CRC_Calculate(&hcrc, (const uint32_t*) packet, PACKET_RAW_SIZE(packet_simple_t));
+		uint32_t calculatedCRC = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet, PACKET_RAW_SIZE(packet_simple_t));
 		if (packet->crc != calculatedCRC)
 			return;
 
@@ -86,7 +100,7 @@ static void _packet_receive(packet_type_t type, const void* data, size_t size) {
 		if (size < sizeof(packet_config_t)) return;
 		const packet_config_t* packet = (const packet_config_t*) data;
 
-		uint32_t calculatedCRC = HAL_CRC_Calculate(&hcrc, (const uint32_t*) packet, PACKET_RAW_SIZE(packet_config_t));
+		uint32_t calculatedCRC = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet, PACKET_RAW_SIZE(packet_config_t));
 		if (packet->crc != calculatedCRC)
 			return;
 

@@ -3,6 +3,8 @@
 #include "tusb.h"
 
 uint16_t packet_timer_delta_fill(uint16_t* packet, const uint32_t* data, uint32_t *last_capture) {
+	SCB_InvalidateDCache_by_Addr((uint32_t*)(((uint32_t)data) & 0x1F), DMA_HALF_BUFFER_SIZE * sizeof(uint32_t) + 0x20);
+
 	uint16_t packet_len = sizeof(packet_simple_t);
 
 	packet_header_t* header = (packet_header_t*) packet;
@@ -30,7 +32,7 @@ uint16_t packet_timer_delta_fill(uint16_t* packet, const uint32_t* data, uint32_
 	}
 	*last_capture = last_value;
 
-	packet_len += (deltas - delta_start);
+	packet_len += (deltas - delta_start) * sizeof(*deltas);
 	header->length = packet_len + sizeof(uint32_t);
 
 	uint32_t crc = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet, packet_len);
@@ -79,7 +81,6 @@ void tud_vendor_rx_cb(uint8_t itf, const uint8_t *buffer, uint32_t bufsize) {
 					s_packet_process = PACKET_PROCESS_READ_HEADER;
 					s_packet_read_length = 0;
 				} else i++;
-				;
 			case PACKET_PROCESS_READ_HEADER:
 				s_packet_read_buffer[s_packet_read_length++] = buff[i++];
 				if (s_packet_read_length >= sizeof(packet_header_t)) {
