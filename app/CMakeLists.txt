@@ -85,6 +85,7 @@ include_directories(${PROJECT_NAME}
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/renderer/imgui_render.cpp
+    src/tcp/tcp.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

@@ -1,6 +1,7 @@
 #include "imgui_render.hpp"
 #include <iostream>
 #include "../common/packet.h"
+#include "tcp/tcp.hpp"
 #include <vendor/crc.h>
 
 namespace Render {
@@ -46,7 +47,28 @@ void ImGuiManager::RenderDeviceBar() {
         ImGuiWindowFlags_NoScrollbar
     );
 
-    ImGui::Text("STM32 COT DAQ: Disconnected");
+    const char* status = "Disconnected";
+    if (TCP::ClientManager::Get().IsConnected()) {
+        status = "Connected";
+    } else if (TCP::ClientManager::Get().IsConnecting()) {
+        status = "Connecting...";
+    }
+
+    ImGui::Text("STM32 COT DAQ: %s", status);
+
+    if (!TCP::ClientManager::Get().IsConnecting()) {
+        if (TCP::ClientManager::Get().IsConnected()) {
+            if (ImGui::Button("Disconnect")) {
+                TCP::ClientManager::Get().TryDisconnect();
+            }
+        }
+        else {
+            if (ImGui::Button("Connect")) {
+                TCP::ClientManager::Get().TryConnect();
+            }
+        }
+
+    }
 
     /*
     if (USB::Manager::Get().IsConnected()) {
