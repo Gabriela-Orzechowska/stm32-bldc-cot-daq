@@ -67,10 +67,8 @@
 #define LWIP_DNS_SECURE 7
 /*----- Default Value for TCP_MSS: 536 ---*/
 #define TCP_MSS 1426
-/*----- Value in opt.h for TCP_SND_QUEUELEN: (4*TCP_SND_BUF + (TCP_MSS - 1))/TCP_MSS -----*/
-#define TCP_SND_QUEUELEN 9
-/*----- Value in opt.h for TCP_SNDQUEUELOWAT: LWIP_MAX(TCP_SND_QUEUELEN)/2, 5) -*/
-#define TCP_SNDQUEUELOWAT 5
+/*----- Default Value for TCP_SND_BUF: 2852 ---*/
+#define TCP_SND_BUF 4278
 /*----- Value in opt.h for LWIP_NETIF_LINK_CALLBACK: 0 -----*/
 #define LWIP_NETIF_LINK_CALLBACK 1
 /*----- Value in opt.h for LWIP_NETCONN: 1 -----*/

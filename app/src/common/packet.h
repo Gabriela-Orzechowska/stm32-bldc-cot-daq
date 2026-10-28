@@ -9,7 +9,7 @@ typedef enum {
 	PACKET_TYPE_TIMER_DELTA,
 	PACKET_TYPE_ADC_VALUES,
 	PACKET_TYPE_CONFIG,
-	PACKET_TYPE_CONFIG_REQUEST,
+	PACKET_TYPE_DEVICE_INFO,
 
 	PACKET_TYPE_COUNT,
 } packet_type_t;
@@ -23,15 +23,16 @@ typedef struct {
 
 typedef struct {
 	packet_header_t header;
-	uint32_t deltas[DMA_HALF_BUFFER_SIZE];
-	uint32_t crc;
-} packet_timer_delta_t;
-
-typedef struct {
-	packet_header_t header;
 	config_t config;
 	uint32_t crc;
 } packet_config_t;
+
+typedef struct {
+	packet_header_t header;
+	uint32_t device_name;
+	uint32_t device_clock;
+	uint32_t crc;
+} packet_device_info_t;
 
 typedef struct {
 	packet_header_t header;

@@ -46,6 +46,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(asiocmake)
 
+# File Dialog X
+FetchContent_Declare(
+    nativefiledialog-extended
+    GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
+    GIT_TAG        v1.3.0
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(nativefiledialog-extended)
+
 find_package(OpenGL REQUIRED)
 
 set(IMGUI_DIR "${imgui_SOURCE_DIR}")
@@ -86,6 +95,7 @@ add_executable(${PROJECT_NAME}
     src/main.cpp
     src/renderer/imgui_render.cpp
     src/tcp/tcp.cpp
+    src/device/manager.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -94,7 +104,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glfw
     OpenGL::GL
     asio::asio
-    ${LIBUSB_TARGET}
+    nfd
 )
 
 if (MSVC)

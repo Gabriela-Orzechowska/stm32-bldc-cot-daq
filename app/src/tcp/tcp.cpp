@@ -22,7 +22,7 @@ void ClientManager::TryConnect() {
         [this] {
             if (this->m_stopping || this->m_connected) return;
 
-            this->m_resolver.async_resolve("192.168.1.130", "5000",
+            this->m_resolver.async_resolve("192.168.8.130", "5000",
                 asio::bind_executor(this->m_strand,
                 [this](const asio::error_code& ec, tcp::resolver::results_type endpoints) {
                     this->m_connecting = false;
@@ -63,7 +63,9 @@ void ClientManager::TryDisconnect() {
 void ClientManager::SendData(const std::span<uint8_t> &data) {
     if(data.size() == 0) return;
 
-    auto dataP = std::make_shared<std::span<uint8_t>>(data);
+    auto dataP = std::make_shared<std::vector<uint8_t>>(
+        data.begin(), data.end()
+    );
 
     asio::post(
         this->m_strand,

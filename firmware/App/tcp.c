@@ -29,21 +29,34 @@ bool server_send_data(const void* data, size_t size) {
 	if (!data || !size) return false;
 
 	const char* p = (const char *)data;
-	while (size > TCP_SND_BUF) {
-		err_t ret = tcp_write(s_client_pcb, p, TCP_SND_BUF, TCP_WRITE_FLAG_COPY);
+	while (size > 0) {
+		uint16_t available = tcp_sndbuf(s_client_pcb);
+		if (available == 0) {
+			MX_LWIP_Process();
+			continue;
+		}
+
+		size_t chunk = size < available ? size : available;
+
+		err_t ret = tcp_write(s_client_pcb, p, chunk, TCP_WRITE_FLAG_COPY);
+		if (ret == ERR_MEM) {
+			tcp_output(s_client_pcb);
+			MX_LWIP_Process();
+			continue;
+		}
 		if (ret != ERR_OK) return false;
 
 		ret = tcp_output(s_client_pcb);
 		if (ret != ERR_OK) return false;
 
-		p += TCP_SND_BUF;
-		size -= TCP_SND_BUF;
+		p += chunk;
+		size -= chunk;
+
+		ret = tcp_output(s_client_pcb);
+		if (ret != ERR_OK) return false;
 	}
 
-	err_t ret = tcp_write(s_client_pcb, p, size, TCP_WRITE_FLAG_COPY);
-	if (ret != ERR_OK) return false;
-
-	return tcp_output(s_client_pcb) == ERR_OK;
+	return true;
 }
 
 bool server_init(void) {

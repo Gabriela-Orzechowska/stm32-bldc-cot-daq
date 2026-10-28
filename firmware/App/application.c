@@ -12,10 +12,11 @@
 static volatile bool s_buffer_ready_half = {0};
 static volatile bool s_buffer_ready_full = {0};
 
-ALIGN_NO_CACHE static uint32_t s_buffer_timer[DMA_BUFFER_SIZE] = {0};
+ALIGN_NO_CACHE_D2 static uint32_t s_buffer_timer[DMA_BUFFER_SIZE] = {0};
+ALIGN_NO_CACHE_D2 static uint8_t s_packet_timer[PACKET_TIMER_MINIMAL_SPACE];
 
 static uint32_t s_last_capture = {0};
-static uint8_t s_packet_timer[PACKET_TIMER_MINIMAL_SPACE];
+
 
 static void _application_init(void);
 static void _application_loop(void);
@@ -37,10 +38,15 @@ static void _usb_init(void) {
 static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel);
 
 static void _application_client_connect(void) {
-	packet_config_t packet;
-	packet_config_init(&packet);
+	packet_device_info_t info;
+	packet_device_info_init(&info);
 
-	server_send_data(&packet, sizeof(packet));
+	server_send_data(&info, sizeof(info));
+
+	packet_config_t config;
+	packet_config_init(&config);
+
+	server_send_data(&config, sizeof(config));
 }
 static void _application_client_data_receive(const void* data, size_t size) {
 	packet_process_data(data, size);
@@ -60,29 +66,19 @@ static void _application_init(void) {
 }
 
 static void _application_loop(void) {
-	// Process timer packets
-	bool has_data = false;
-	uint16_t packet_size = 0;
-
 	MX_LWIP_Process();
-	/*
+
 	if (s_buffer_ready_half) {
-		SCB_CleanInvalidateDCache_by_Addr(s_buffer_timer, sizeof(s_buffer_timer) / 2);
-		packet_size = packet_timer_delta_fill((uint16_t*) s_packet_timer, s_buffer_timer, &s_last_capture);
-		has_data = true;
+		uint16_t packet_size = packet_timer_delta_fill((uint16_t*) s_packet_timer, s_buffer_timer, &s_last_capture);
 		s_buffer_ready_half = false;
+		server_send_data(s_packet_timer, packet_size);
+
 	}
 	else if (s_buffer_ready_full) {
-		packet_size = packet_timer_delta_fill((uint16_t*)s_packet_timer, &s_buffer_timer[DMA_HALF_BUFFER_SIZE], &s_last_capture);
-		has_data = true;
+		uint16_t packet_size = packet_timer_delta_fill((uint16_t*)s_packet_timer, &s_buffer_timer[DMA_HALF_BUFFER_SIZE], &s_last_capture);
 		s_buffer_ready_full = false;
+		server_send_data(s_packet_timer, packet_size);
 	}
-
-	if (has_data) {
-		tud_vendor_write(s_packet_timer, packet_size);
-		tud_vendor_write_flush();
-	}
-	*/
 }
 
 static void _packet_receive(packet_type_t type, const void* data, size_t size) {

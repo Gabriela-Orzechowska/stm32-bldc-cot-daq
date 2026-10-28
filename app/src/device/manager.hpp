@@ -1,8 +1,18 @@
 #pragma once
 #include "common/packet.h"
+#include <string>
 #include <vector>
 #include <functional>
 #include <span>
+#include <filesystem>
+#include <fstream>
+
+#define MAX_PATH 260
+
+
+namespace Render {
+    class ImGuiManager;
+}
 
 namespace Device {
 class PacketParser {
@@ -24,8 +34,12 @@ private:
 
 class Manager {
 public:
+    friend class Render::ImGuiManager;
+
     Manager(){}
-    ~Manager(){}
+    ~Manager(){
+        this->EndCapture();
+    }
 
     static Manager& Get() {
         static Manager instance;
@@ -35,10 +49,18 @@ public:
     void Init();
     void Deinit();
     void SendConfig();
+    void UpdatePaths();
+
+    void BeginCapture();
+    void EndCapture();
 
     inline config_t& GetConfig() { return m_deviceConfig; }
 
+	inline const std::string& GetDeviceName() const { return m_deviceName; }
+	inline uint32_t GetDeviceClock() const { return m_deviceClock; }
+
 private:
+    std::vector<uint32_t> _ProcessDeltas(const packet_header_t* header);
     void _ProcessPacket(const packet_header_t *header);
     void _OnDataReceive(const std::span<uint8_t> &data);
 
@@ -52,8 +74,14 @@ private:
     }
 
     PacketParser m_parser;
+    bool m_isCapturing;
 
+    std::filesystem::path m_outputPath;
     config_t m_deviceConfig;
+    std::string m_deviceName = "";
+	uint32_t m_deviceClock = 0;
+
+    std::filesystem::path m_timerValuePath;
+    std::ofstream m_timerValueFile;
 };
-    
-} // namespace Packet
+} // namespace Device

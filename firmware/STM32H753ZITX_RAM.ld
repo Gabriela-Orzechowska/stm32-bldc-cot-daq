@@ -184,6 +184,14 @@ SECTIONS
     *(.no_cache.*)
     . = ALIGN(32);
 	} >RAM_D2
+	
+	.no_cache_D3 (NOLOAD) :
+	{
+    . = ALIGN(32);
+    *(.no_cache_D3)
+    *(.no_cache_D3.*)
+    . = ALIGN(32);
+	} >RAM_D3
 
   /* Remove information from the standard libraries */
   /DISCARD/ :

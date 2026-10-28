@@ -3,9 +3,7 @@
 #include "tusb.h"
 
 uint16_t packet_timer_delta_fill(uint16_t* packet, const uint32_t* data, uint32_t *last_capture) {
-	SCB_InvalidateDCache_by_Addr((uint32_t*)(((uint32_t)data) & 0x1F), DMA_HALF_BUFFER_SIZE * sizeof(uint32_t) + 0x20);
-
-	uint16_t packet_len = sizeof(packet_simple_t);
+	uint16_t packet_len = sizeof(packet_header_t);
 
 	packet_header_t* header = (packet_header_t*) packet;
 	header->magic	= PACKET_HEADER_MAGIC;
@@ -36,8 +34,8 @@ uint16_t packet_timer_delta_fill(uint16_t* packet, const uint32_t* data, uint32_
 	header->length = packet_len + sizeof(uint32_t);
 
 	uint32_t crc = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet, packet_len);
+	*deltas++ = (crc >> 0) & 0xFFFF;
 	*deltas++ = (crc >> 16) & 0xFFFF;
-	*deltas++ = (crc >>  0) & 0xFFFF;
 
 	return packet_len + sizeof(uint32_t);
 }
@@ -52,6 +50,23 @@ void packet_config_init(packet_config_t *packet) {
 	packet->config = g_config;
 	packet->crc = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet,
 			PACKET_RAW_SIZE(packet_config_t));
+}
+
+void packet_device_info_init(packet_device_info_t *packet) {
+	memset(packet, 0, sizeof(packet_device_info_t));
+
+	packet->header.magic = PACKET_HEADER_MAGIC;
+	packet->header.length = sizeof(packet_device_info_t);
+	packet->header.type = PACKET_TYPE_DEVICE_INFO;
+
+	packet->device_name = 'H753';
+	packet->device_clock = HAL_RCC_GetPCLK2Freq();
+	if ((RCC->D2CFGR & RCC_D2CFGR_D2PPRE2) != RCC_D2CFGR_D2PPRE2_DIV1) {
+		packet->device_clock *= 2U;
+	}
+
+	packet->crc = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet,
+			PACKET_RAW_SIZE(packet_device_info_t));
 }
 
 typedef enum {

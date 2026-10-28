@@ -1,11 +1,29 @@
 #include "imgui_render.hpp"
 #include <iostream>
-#include "../common/packet.h"
+#include "common/packet.h"
 #include "tcp/tcp.hpp"
 #include <vendor/crc.h>
+#include "device/manager.hpp"
+#include <optional>
+#include <string>
+#include <filesystem>
+#include <nfd.h>
+#include <imgui_internal.h>
 
 namespace Render {
 
+static std::optional<std::filesystem::path> _OpenFolder() {
+    nfdchar_t* outPath = nullptr;
+
+    nfdresult_t ret = NFD_PickFolderU8(&outPath, nullptr);
+
+    if (ret != NFD_OKAY) return std::nullopt;
+
+    std::filesystem::path path(outPath);
+    NFD_FreePathU8(outPath);
+
+    return path;
+}
 
 void ImGuiManager::Init() {
     IMGUI_CHECKVERSION();
@@ -47,6 +65,8 @@ void ImGuiManager::RenderDeviceBar() {
         ImGuiWindowFlags_NoScrollbar
     );
 
+    Device::Manager& device = Device::Manager::Get();
+
     const char* status = "Disconnected";
     if (TCP::ClientManager::Get().IsConnected()) {
         status = "Connected";
@@ -69,30 +89,54 @@ void ImGuiManager::RenderDeviceBar() {
         }
 
     }
-
-    /*
-    if (USB::Manager::Get().IsConnected()) {
-        config_t& config = USB::Manager::Get().GetConfig();
-        int configResolution    = config.encoder_resolution;
-        int configMode          = config.encoder_mode;
-        int configChannel       = config.encoder_channel;
-
+    if (TCP::ClientManager::Get().IsConnected()) {
         ImGui::PushItemWidth(140.0f);
-        ImGui::InputInt("Rozdzielczość enkodera", &configResolution, 1);
-        ImGui::Combo("Tryb", &configMode, "Jedno zbocze\0Oba zbocza\0XOR\0\0");
+        ImGui::Text("Device Info: Type: %s, Timer Clock: %uMHz", device.GetDeviceName().c_str(), device.GetDeviceClock() / 1000000);
+
+
+		config_t& config = device.GetConfig();
+        int configResolution = config.encoder_resolution;
+        int configMode = config.encoder_mode;
+        int configChannel = config.encoder_channel;
+
+        
+        ImGui::InputInt("Encoder Resolution", &configResolution, 1);
+        ImGui::SameLine();
+        ImGui::Combo("Mode", &configMode, "Single edge\0Both edges\0XOR\0\0");
         if (configMode != 2) {
-            ImGui::Combo("Kanał", &configChannel, "A\0B\0\0");
+            ImGui::SameLine();
+            ImGui::Combo("Channel", &configChannel, "A\0B\0\0");
         }
-        config.encoder_resolution   = configResolution;
-        config.encoder_mode         = configMode;
-        config.encoder_channel      = configChannel;
+        config.encoder_resolution = configResolution;
+        config.encoder_mode = configMode;
+        config.encoder_channel = configChannel;
 
         ImGui::PopItemWidth();
-        if (ImGui::Button("Zapisz")) {
-            USB::Manager::Get().SendConfig();
+        ImGui::SameLine();
+        if (ImGui::Button("Save")) {
+            device.SendConfig();
+        }
+
+
+        if (ImGui::Button("Select Output Folder") && !device.m_isCapturing) {
+            auto ret = _OpenFolder();
+            if (ret.has_value()) {
+                device.m_outputPath = ret.value();
+                device.UpdatePaths();
+            }
+        }
+        ImGui::SameLine();
+        ImGui::Text("%ls", device.m_outputPath.c_str());
+
+        if (device.m_outputPath != "") {
+            if (!device.m_isCapturing && ImGui::Button("Start Capture")) {
+                device.BeginCapture();
+            } else if (device.m_isCapturing && ImGui::Button("Stop Capture")) {
+                device.EndCapture();
+            }
         }
     }
-    */
+
 
     ImGui::End();
 }

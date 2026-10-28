@@ -2,6 +2,7 @@
 #include <cmath>
 
 #include <GLFW/glfw3.h>
+#include <nfd.h>
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -9,6 +10,7 @@
 #include "implot.h"
 
 #include "renderer/imgui_render.hpp"
+#include "device/manager.hpp"
 
 int main() {
     if (!glfwInit()) return 1;
@@ -27,7 +29,9 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);  // VSync
 
+    NFD_Init();
     Render::ImGuiManager::Get().Init();
+	Device::Manager::Get().Init();
 
     ImPlot::CreateContext();
 
@@ -56,6 +60,7 @@ int main() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
 
+    NFD_Quit();
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
 

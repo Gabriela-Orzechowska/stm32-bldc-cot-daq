@@ -19,7 +19,6 @@ static void _config_init_default(void) {
 }
 
 void config_init(void) {
-	_config_init_default();
 	static const config_t* const flash_config = (const config_t*)CONFIG_FLASH_ADDR;
 	g_config = *flash_config;
 
