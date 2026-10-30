@@ -60,7 +60,6 @@ public:
 	inline uint32_t GetDeviceClock() const { return m_deviceClock; }
 
 private:
-    std::vector<uint32_t> _ProcessDeltas(const packet_header_t* header);
     void _ProcessPacket(const packet_header_t *header);
     void _OnDataReceive(const std::span<uint8_t> &data);
 
@@ -83,5 +82,8 @@ private:
 
     std::filesystem::path m_timerValuePath;
     std::ofstream m_timerValueFile;
+
+    std::filesystem::path m_adcValuesPath;
+    std::ofstream m_adcValuesFile;
 };
 } // namespace Device

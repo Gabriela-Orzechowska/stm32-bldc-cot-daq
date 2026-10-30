@@ -2,6 +2,13 @@
 #include "crc.h"
 #include "tusb.h"
 
+void packet_adc_init(packet_header_t* header) {
+	header->magic = PACKET_HEADER_MAGIC;
+	header->type = PACKET_TYPE_ADC_VALUES;
+	header->length = sizeof(packet_simple_t) + sizeof(uint16_t) * (ADC_CHANNEL_COUNT * DMA_HALF_BUFFER_SIZE);
+	header->reserved = 0;
+}
+
 uint16_t packet_timer_delta_fill(uint16_t* packet, const uint32_t* data, uint32_t *last_capture) {
 	uint16_t packet_len = sizeof(packet_header_t);
 

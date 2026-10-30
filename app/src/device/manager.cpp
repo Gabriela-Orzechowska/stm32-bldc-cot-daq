@@ -59,7 +59,8 @@ namespace Device {
     }
 
     void Manager::UpdatePaths() {
-        m_timerValuePath = m_outputPath / "speed.bin";
+        this->m_timerValuePath =  this->m_outputPath / "speed.bin";
+        this->m_adcValuesPath = this->m_outputPath / "adc.bin";
     }
 
     void Manager::BeginCapture() {
@@ -68,6 +69,7 @@ namespace Device {
         this->m_isCapturing = true;
 
         this->m_timerValueFile.open(this->m_timerValuePath, std::ios::out | std::ios::trunc | std::ios::binary);
+        this->m_adcValuesFile.open(this->m_adcValuesPath, std::ios::out | std::ios::trunc | std::ios::binary);
     }
 
     void Manager::EndCapture() {
@@ -76,8 +78,10 @@ namespace Device {
         this->m_isCapturing = false;
 
         this->m_timerValueFile.flush();
-        this->m_timerValueFile.close();
+        this->m_adcValuesFile.flush();
 
+        this->m_timerValueFile.close();
+        this->m_adcValuesFile.close();
     }
 
     void Manager::Init() {
@@ -90,7 +94,7 @@ namespace Device {
         this->m_parser.Feed(data);
     }
 
-    std::vector<uint32_t> Manager::_ProcessDeltas(const packet_header_t* header) {
+    static std::vector<uint32_t> _ProcessDeltas(const packet_header_t* header) {
         std::vector<uint32_t> deltas(DMA_HALF_BUFFER_SIZE, 0);
 
         const uint16_t* raw = (const uint16_t*)header + (sizeof(packet_header_t)/sizeof(uint16_t));
@@ -114,6 +118,18 @@ namespace Device {
         }
         return deltas;
 	}
+
+    static std::vector<uint16_t> _ExtractADCValues(const packet_header_t* header) {
+        const size_t count = (header->length - sizeof(packet_simple_t)) / sizeof(uint16_t);
+        std::vector<uint16_t> values(count, 0);
+
+        const uint16_t* start = (const uint16_t*)header + (sizeof(packet_header_t) / sizeof(uint16_t));
+        for (size_t i = 0; i < count; i++) {
+            values[i] = FromLittleEndian(start[i]);
+        }
+
+        return values;
+    }
 
     void Manager::_ProcessPacket(const packet_header_t* header) {
         switch (header->type) {
@@ -142,8 +158,14 @@ namespace Device {
         case PACKET_TYPE_TIMER_DELTA: {
             if (!this->m_isCapturing) break;
 
-            auto ret = this->_ProcessDeltas(header);
+            auto ret = _ProcessDeltas(header);
             this->m_timerValueFile.write((const char*)(ret.data()), ret.size() * sizeof(uint32_t));
+        } break;
+        case PACKET_TYPE_ADC_VALUES: {
+            if (!this->m_isCapturing) break;
+
+            auto ret = _ExtractADCValues(header);
+            this->m_adcValuesFile.write((const char*)ret.data(), ret.size() * sizeof(uint16_t));
         } break;
 
         default:

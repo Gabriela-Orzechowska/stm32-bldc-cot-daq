@@ -48,5 +48,6 @@ uint16_t packet_timer_delta_fill(uint16_t* packet, const uint32_t* data, uint32_
 void packet_config_init(packet_config_t *packet);
 void packet_device_info_init(packet_device_info_t* packet);
 void packet_process_data(const void *buffer, size_t size);
+void packet_adc_init(packet_header_t* header);
 
 #define PACKET_TIMER_MINIMAL_SPACE	((DMA_HALF_BUFFER_SIZE * sizeof(uint32_t) * 3) + sizeof(packet_simple_t) + 256)
