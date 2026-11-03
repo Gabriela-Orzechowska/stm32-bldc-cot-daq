@@ -33,7 +33,7 @@ FetchContent_MakeAvailable(imgui)
 FetchContent_Declare(
     implot
     GIT_REPOSITORY https://github.com/epezent/implot.git
-    GIT_TAG v0.17
+    GIT_TAG v1.1
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(implot)
@@ -54,6 +54,22 @@ FetchContent_Declare(
     GIT_SHALLOW    TRUE
 )
 FetchContent_MakeAvailable(nativefiledialog-extended)
+
+# PocketFFT
+FetchContent_Declare(
+    pocketfft
+    GIT_REPOSITORY https://github.com/mreineck/pocketfft.git
+    GIT_TAG cpp
+    SOURCE_SUBDIR pocketfft-cmake-placeholder
+)
+
+FetchContent_MakeAvailable(pocketfft)
+
+add_library(pocketfft INTERFACE)
+
+target_include_directories(pocketfft INTERFACE
+    ${pocketfft_SOURCE_DIR}
+)
 
 find_package(OpenGL REQUIRED)
 
@@ -105,6 +121,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenGL::GL
     asio::asio
     nfd
+    pocketfft
 )
 
 if (MSVC)

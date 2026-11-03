@@ -6,9 +6,9 @@
 #include <span>
 #include <filesystem>
 #include <fstream>
+#include <thread>
 
 #define MAX_PATH 260
-
 
 namespace Render {
     class ImGuiManager;
@@ -30,6 +30,43 @@ public:
 private:
     std::vector<uint8_t> m_buffer;
     PacketCallback m_callback = nullptr;
+};
+
+class FFTHandler {
+public:
+    FFTHandler() : m_hasSpeedFFT(false) {};
+    ~FFTHandler(){};
+
+    inline void SetupFFT(size_t speedSize, size_t adcSize) {
+        this->m_speedSize = speedSize;
+        this->m_adcSize = adcSize;
+    }
+
+    void ParseSpeed(const std::vector<double>& data);
+    void ParseADC(const std::vector<uint16_t>& data);
+    void CalculateFFT();
+
+    inline bool HasSpeedFFT() const { return m_hasSpeedFFT; }
+
+    inline const std::vector<double> GetSpeedFFT() const { 
+        return m_speedOutput; 
+    }
+    inline const std::vector<double> GetADCFFT(int i) const {
+        return m_adcOutput[i];
+    }
+
+protected:
+    size_t m_speedSize;
+    size_t m_adcSize;
+
+    std::vector<double> m_speedSamples;
+    std::vector<double> m_speedOutput;
+
+    std::vector<double> m_adcSamples[4];
+    std::vector<double> m_adcOutput[4];
+
+    bool m_hasSpeedFFT;
+
 };
 
 class Manager {
@@ -54,6 +91,7 @@ public:
     void BeginCapture();
     void EndCapture();
 
+    inline const FFTHandler& GetFFT() const { return m_fft; }
     inline config_t& GetConfig() { return m_deviceConfig; }
 
 	inline const std::string& GetDeviceName() const { return m_deviceName; }
@@ -73,6 +111,7 @@ private:
     }
 
     PacketParser m_parser;
+    FFTHandler m_fft;
     bool m_isCapturing;
 
     std::filesystem::path m_outputPath;
@@ -85,5 +124,7 @@ private:
 
     std::filesystem::path m_adcValuesPath;
     std::ofstream m_adcValuesFile;
+
+    std::thread m_fftThread;
 };
 } // namespace Device

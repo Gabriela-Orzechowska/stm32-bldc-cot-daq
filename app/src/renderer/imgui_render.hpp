@@ -25,7 +25,8 @@ protected:
     void Render();
     void RenderImpl();
 
-    void RenderDeviceBar();
+    float RenderDeviceBar();
+    void RenderPlots(float y);
 
     bool m_isConnected = false;
 };

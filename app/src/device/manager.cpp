@@ -1,6 +1,8 @@
 #include "device/manager.hpp"
 #include "tcp/tcp.hpp"
 #include "vendor/crc.h"
+#include <pocketfft_hdronly.h>
+#include <numeric>
 
 namespace Device {
     void PacketParser::Feed(const std::span<const uint8_t> data) {
@@ -58,6 +60,94 @@ namespace Device {
         }
     }
 
+
+    static std::vector<double> _CalculateFFT(std::vector<double>& input) {
+        pocketfft::shape_t shape{input.size()};
+        pocketfft::stride_t stride_in{(std::ptrdiff_t)sizeof(double)};
+        pocketfft::stride_t stride_out{(std::ptrdiff_t)sizeof(std::complex<double>)};
+
+        std::vector<double> output(input.size() / 2 + 1);
+        std::vector<std::complex<double>> spectrum(input.size() / 2 + 1);
+        pocketfft::r2c(shape, stride_in, stride_out, 0, pocketfft::FORWARD, input.data(), spectrum.data(), 1.0);
+
+        for(size_t i = 0; i < output.size(); i++) {
+            output[i] = std::abs(spectrum[i]);
+        }
+
+        return output;
+    }
+
+    void FFTHandler::ParseSpeed(const std::vector<double>& data) {
+        if (this->m_speedSize == 0) throw std::invalid_argument("FFT size not set");
+
+        this->m_speedSamples.insert(this->m_speedSamples.end(), data.begin(), data.end());
+        if (this->m_speedSamples.size() >= this->m_speedSize) {
+            size_t over = this->m_speedSamples.size() - this->m_speedSize;
+            if (over > 0) this->m_speedSamples.erase(this->m_speedSamples.begin(), this->m_speedSamples.begin() + over);
+        }
+    }
+
+    void FFTHandler::ParseADC(const std::vector<uint16_t>& data) {
+        if (this->m_adcSize == 0) throw std::invalid_argument("FFT size not set");
+        assert(data.size() % 4 == 0);
+
+        size_t nChan = data.size() / 4;
+
+        size_t start = this->m_adcSamples[0].size();
+        for(size_t i = 0; i < 4; i++) 
+            this->m_adcSamples[i].resize(start + nChan);
+
+        for(size_t n = 0; n < nChan; n++) {
+            this->m_adcSamples[0][start + n] = data[4*n+0];
+            this->m_adcSamples[1][start + n] = data[4*n+1];
+            this->m_adcSamples[2][start + n] = data[4*n+2];
+            this->m_adcSamples[3][start + n] = data[4*n+3];
+        }
+
+        size_t total = start + nChan;
+        size_t over = total > this->m_adcSize ? total- this->m_adcSize : 0;
+        for(size_t i = 0; i < 4; i++ ) {
+            if (over > 0) 
+                this->m_adcSamples[i].erase(this->m_adcSamples[i].begin(), this->m_adcSamples[i].begin() + over);
+        }
+    }
+
+    void FFTHandler::CalculateFFT() {
+        if (this->m_speedSamples.size() >= this->m_speedSize) {
+            std::vector<double> input(this->m_speedSamples.begin(), this->m_speedSamples.begin() + this->m_speedSize);
+
+            const double average = std::reduce(input.begin(), input.end()) / (float)input.size();
+            for (auto& elem : input)
+                elem -= average;
+
+            this->m_speedOutput = _CalculateFFT(input);
+            this->m_hasSpeedFFT = true;
+        }
+
+        for(int i = 0; i < 4; i++) {
+            if (this->m_adcSamples[i].size() >= this->m_adcSize) {
+                std::vector<double> input(this->m_adcSamples[i].begin(), this->m_adcSamples[i].begin() + this->m_adcSize);
+
+                const double average = std::reduce(input.begin(), input.end()) / (float)input.size();
+                for (auto& elem : input)
+                    elem -= average;
+
+                this->m_adcOutput[i] = _CalculateFFT(input);
+            }
+        }
+    }
+
+    static std::vector<double> _CalculateSpeed(const std::vector<uint32_t>& samples, uint32_t clockSpeed, uint32_t sampleCount) {
+        std::vector<double> output(samples.size(), 0);
+
+        const double mult = (60.0 * clockSpeed) / (4.0 * sampleCount);
+        for(size_t i = 0; i < samples.size(); i++) {
+            output[i] = mult / samples[i];
+        }
+
+        return output;
+    }
+
     void Manager::UpdatePaths() {
         this->m_timerValuePath =  this->m_outputPath / "speed.bin";
         this->m_adcValuesPath = this->m_outputPath / "adc.bin";
@@ -66,10 +156,19 @@ namespace Device {
     void Manager::BeginCapture() {
         if (this->m_isCapturing) return;
 
+        this->m_fft.SetupFFT(this->m_deviceConfig.encoder_resolution * 10, 200 * 10);
         this->m_isCapturing = true;
 
         this->m_timerValueFile.open(this->m_timerValuePath, std::ios::out | std::ios::trunc | std::ios::binary);
         this->m_adcValuesFile.open(this->m_adcValuesPath, std::ios::out | std::ios::trunc | std::ios::binary);
+
+        this->m_fftThread = std::thread([this] {
+            for(;;) {
+                if (!this->m_isCapturing) return;
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                this->m_fft.CalculateFFT();
+            }
+        });
     }
 
     void Manager::EndCapture() {
@@ -82,6 +181,9 @@ namespace Device {
 
         this->m_timerValueFile.close();
         this->m_adcValuesFile.close();
+
+        if (this->m_fftThread.joinable())
+            this->m_fftThread.join();
     }
 
     void Manager::Init() {
@@ -159,12 +261,15 @@ namespace Device {
             if (!this->m_isCapturing) break;
 
             auto ret = _ProcessDeltas(header);
+            auto speed = _CalculateSpeed(ret, m_deviceClock, m_deviceConfig.encoder_resolution);
+            this->m_fft.ParseSpeed(speed);
             this->m_timerValueFile.write((const char*)(ret.data()), ret.size() * sizeof(uint32_t));
         } break;
         case PACKET_TYPE_ADC_VALUES: {
             if (!this->m_isCapturing) break;
 
             auto ret = _ExtractADCValues(header);
+            this->m_fft.ParseADC(ret);
             this->m_adcValuesFile.write((const char*)ret.data(), ret.size() * sizeof(uint16_t));
         } break;
 

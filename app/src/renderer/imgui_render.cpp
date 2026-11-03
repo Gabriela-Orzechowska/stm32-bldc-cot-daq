@@ -1,4 +1,5 @@
 #include "imgui_render.hpp"
+#include "implot.h"
 #include <iostream>
 #include "common/packet.h"
 #include "tcp/tcp.hpp"
@@ -28,6 +29,7 @@ static std::optional<std::filesystem::path> _OpenFolder() {
 void ImGuiManager::Init() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
 
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -52,7 +54,7 @@ void ImGuiManager::Render() {
     ImGui::Render();
 }
 
-void ImGuiManager::RenderDeviceBar() {
+float ImGuiManager::RenderDeviceBar() {
     ImGuiIO& io = ImGui::GetIO();
 
     ImGui::SetNextWindowPos(ImVec2(0.0f,0.0f));
@@ -126,7 +128,7 @@ void ImGuiManager::RenderDeviceBar() {
             }
         }
         ImGui::SameLine();
-        ImGui::Text("%ls", device.m_outputPath.c_str());
+        ImGui::Text("%s", device.m_outputPath.c_str());
 
         if (device.m_outputPath != "") {
             if (!device.m_isCapturing && ImGui::Button("Start Capture")) {
@@ -137,6 +139,86 @@ void ImGuiManager::RenderDeviceBar() {
         }
     }
 
+    float ret = ImGui::GetWindowSize().y;
+    ImGui::End();
+
+    return ret;
+}
+
+void ImGuiManager::RenderPlots(float y) {
+    Device::Manager& device = Device::Manager::Get();
+    const Device::FFTHandler& fft = device.GetFFT();
+    
+    if (!fft.HasSpeedFFT()) {
+        return;
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y - y));
+    ImGui::SetNextWindowPos(ImVec2(0, y));
+
+    ImGui::Begin("Plots", nullptr,
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoScrollbar
+    );
+
+
+    std::vector<double> mag;
+    float resolution = device.GetConfig().encoder_resolution;
+    const char* plotName;
+
+    if(ImGui::BeginTabBar("##tabbar")) {
+        if(ImGui::BeginTabItem("Speed")) {
+            plotName = "Speed FFT";
+            mag = fft.GetSpeedFFT();
+            ImGui::EndTabItem();
+        }
+        if(ImGui::BeginTabItem("ADC1")) {
+            plotName = "ADC1 FFT";
+            mag = fft.GetADCFFT(0);
+            resolution /= 3.0f;
+            ImGui::EndTabItem();
+        }
+        if(ImGui::BeginTabItem("ADC2")) {
+            plotName = "ADC2 FFT";
+            mag = fft.GetADCFFT(1);
+            resolution /= 3.0f;
+            ImGui::EndTabItem();
+        }
+        if(ImGui::BeginTabItem("ADC3")) {
+            plotName = "ADC3 FFT";
+            mag = fft.GetADCFFT(2);
+            resolution /= 3.0f;
+            ImGui::EndTabItem();
+        }
+        if(ImGui::BeginTabItem("ADC4")) {
+            plotName = "ADC4 FFT";
+            mag = fft.GetADCFFT(3);
+            resolution /= 3.0f;
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
+
+
+    std::vector<double> freq(mag.size(), 0);
+
+    const double mult = resolution / (freq.size() * 2.0);
+    for(size_t i = 0; i < freq.size(); i++) {
+        freq[i] = i * mult;
+    }
+
+    if(ImPlot::BeginPlot(plotName, ImVec2(-1, -1))) {
+        ImPlot::SetupAxes("Order", "Magnitude");
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, 8.0);
+
+        ImPlot::PlotScatter("Speed FFT", freq.data(), mag.data(), (int)mag.size());
+        ImPlot::PlotLine("Speed FFT", freq.data(), mag.data(), (int)mag.size());
+
+        ImPlot::EndPlot();
+    }
 
     ImGui::End();
 }
@@ -155,9 +237,16 @@ void ImGuiManager::RenderImpl() {
         ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoBackground;
     
+    ImPlot::ShowDemoWindow();
+
     ImGui::Begin("Root", nullptr, flags);
 
-    this->RenderDeviceBar();
+
+
+    float y = this->RenderDeviceBar();
+
+    this->RenderPlots(y);
+
 
     ImGui::End();
 }
