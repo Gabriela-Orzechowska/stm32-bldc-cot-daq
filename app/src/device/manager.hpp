@@ -37,9 +37,12 @@ public:
     FFTHandler() : m_hasSpeedFFT(false) {};
     ~FFTHandler(){};
 
-    inline void SetupFFT(size_t speedSize, size_t adcSize) {
-        this->m_speedSize = speedSize;
-        this->m_adcSize = adcSize;
+    inline void SetupFFT(size_t speedRevSize, size_t adcRevSize, size_t revCount) {
+        this->m_speedSize = speedRevSize * revCount;
+        this->m_adcSize = adcRevSize * revCount;
+
+        this->m_speedRevSize = speedRevSize;
+        this->m_adcRevSize = adcRevSize;
     }
 
     void ParseSpeed(const std::vector<double>& data);
@@ -48,22 +51,31 @@ public:
 
     inline bool HasSpeedFFT() const { return m_hasSpeedFFT; }
 
-    inline const std::vector<double> GetSpeedFFT() const { 
+    inline const std::vector<double> GetSpeedPlot() const {
+        return m_speedSamples;
+    }
+    inline const std::vector<double> GetADCPlot(int i) const {
+        return m_adcSamples[i];
+    }
+
+    inline const std::vector<double>& GetSpeedFFT() const { 
         return m_speedOutput; 
     }
-    inline const std::vector<double> GetADCFFT(int i) const {
+    inline const std::vector<double>& GetADCFFT(int i) const {
         return m_adcOutput[i];
     }
 
 protected:
     size_t m_speedSize;
     size_t m_adcSize;
+    size_t m_speedRevSize;
+    size_t m_adcRevSize;
 
     std::vector<double> m_speedSamples;
     std::vector<double> m_speedOutput;
 
-    std::vector<double> m_adcSamples[4];
-    std::vector<double> m_adcOutput[4];
+    std::vector<double> m_adcSamples[ADC_CHANNEL_COUNT];
+    std::vector<double> m_adcOutput[ADC_CHANNEL_COUNT];
 
     bool m_hasSpeedFFT;
 

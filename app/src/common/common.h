@@ -6,6 +6,7 @@
 
 #define DMA_BUFFER_SIZE 1024
 #define DMA_HALF_BUFFER_SIZE (DMA_BUFFER_SIZE / 2)
+#define ADC_CHANNEL_COUNT (4)
 
 #ifdef __cplusplus
 

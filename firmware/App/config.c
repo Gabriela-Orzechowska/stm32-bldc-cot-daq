@@ -10,10 +10,20 @@
 config_t g_config __attribute((aligned(0x40)));
 
 static void _config_init_default(void) {
-	g_config.magic = CONFIG_MAGIC;
-	g_config.encoder_resolution = 600;
-	g_config.encoder_mode = ENCODER_CAPTURE_ONE;
-	g_config.encoder_channel = ENCODER_CHANNEL_A;
+	g_config.magic 					= CONFIG_MAGIC;
+	g_config.encoder_resolution 	= 600;
+	g_config.encoder_mode			= ENCODER_CAPTURE_ONE;
+	g_config.encoder_channel 		= ENCODER_CHANNEL_A;
+	g_config.adc_div 				= 1;
+
+	for (int i = 0; i < ADC_CHANNEL_COUNT; i++) {
+		config_adc_setup_t* adc = &g_config.adc_config[i];
+
+		adc->min_val = 0.0f;
+		adc->max_val = 1.0f;
+		adc->unit[0] = '\0';
+		adc->enabled = false;
+	}
 
 	config_save();
 }

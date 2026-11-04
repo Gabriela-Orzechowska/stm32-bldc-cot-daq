@@ -81,34 +81,31 @@ namespace Device {
         if (this->m_speedSize == 0) throw std::invalid_argument("FFT size not set");
 
         this->m_speedSamples.insert(this->m_speedSamples.end(), data.begin(), data.end());
-        if (this->m_speedSamples.size() >= this->m_speedSize) {
-            size_t over = this->m_speedSamples.size() - this->m_speedSize;
-            if (over > 0) this->m_speedSamples.erase(this->m_speedSamples.begin(), this->m_speedSamples.begin() + over);
+        while (this->m_speedSamples.size() > (this->m_speedSize + this->m_adcRevSize)) {
+            this->m_speedSamples.erase(this->m_speedSamples.begin(), this->m_speedSamples.begin() + this->m_adcRevSize);
         }
     }
 
     void FFTHandler::ParseADC(const std::vector<uint16_t>& data) {
         if (this->m_adcSize == 0) throw std::invalid_argument("FFT size not set");
-        assert(data.size() % 4 == 0);
+        assert(data.size() % ADC_CHANNEL_COUNT == 0);
 
-        size_t nChan = data.size() / 4;
+        size_t nChan = data.size() / ADC_CHANNEL_COUNT;
 
         size_t start = this->m_adcSamples[0].size();
-        for(size_t i = 0; i < 4; i++) 
+        for(size_t i = 0; i < ADC_CHANNEL_COUNT; i++) 
             this->m_adcSamples[i].resize(start + nChan);
 
         for(size_t n = 0; n < nChan; n++) {
-            this->m_adcSamples[0][start + n] = data[4*n+0];
-            this->m_adcSamples[1][start + n] = data[4*n+1];
-            this->m_adcSamples[2][start + n] = data[4*n+2];
-            this->m_adcSamples[3][start + n] = data[4*n+3];
+            for(size_t j = 0; j < ADC_CHANNEL_COUNT; j++) {
+                this->m_adcSamples[j][start + n] = data[ADC_CHANNEL_COUNT*n+j];
+            }
         }
 
-        size_t total = start + nChan;
-        size_t over = total > this->m_adcSize ? total- this->m_adcSize : 0;
-        for(size_t i = 0; i < 4; i++ ) {
-            if (over > 0) 
-                this->m_adcSamples[i].erase(this->m_adcSamples[i].begin(), this->m_adcSamples[i].begin() + over);
+        while (this->m_adcSamples[0].size() > (this->m_adcSize + this->m_adcRevSize)) {
+            for(size_t i = 0; i < ADC_CHANNEL_COUNT; i++ ) {
+                this->m_adcSamples[i].erase(this->m_adcSamples[i].begin(), this->m_adcSamples[i].begin() + this->m_adcRevSize);
+            }
         }
     }
 
@@ -156,7 +153,12 @@ namespace Device {
     void Manager::BeginCapture() {
         if (this->m_isCapturing) return;
 
-        this->m_fft.SetupFFT(this->m_deviceConfig.encoder_resolution * 10, 200 * 10);
+        this->m_fft.SetupFFT(
+            this->m_deviceConfig.encoder_resolution, 
+            this->m_deviceConfig.encoder_resolution / 3, 
+            10
+        );
+
         this->m_isCapturing = true;
 
         this->m_timerValueFile.open(this->m_timerValuePath, std::ios::out | std::ios::trunc | std::ios::binary);
@@ -186,10 +188,30 @@ namespace Device {
             this->m_fftThread.join();
     }
 
+    static std::optional<std::filesystem::path> _GetUserFolder() {
+#ifdef _WIN32
+        const char* home = std::getenv("USERPROFILE");
+#else
+        const char* home = std::getenv("HOME");
+#endif
+
+        if (home)
+            return std::filesystem::path(home);
+
+        return std::nullopt;
+    }
+
     void Manager::Init() {
         this->m_parser.SetCallback(&Manager::__ProcessPacket);
 
         TCP::ClientManager::Get().SetDataCallback(&Manager::__OnDataReceive);
+        
+        auto user = _GetUserFolder();
+        if (user.has_value()) {
+            this->m_outputPath = user.value() / "cot-daq-data";
+            std::filesystem::create_directory(this->m_outputPath);
+        }
+
     }
 
     void Manager::_OnDataReceive(const std::span<uint8_t>& data) {

@@ -32,7 +32,7 @@ void application_entry(void) {
 static void _packet_receive(packet_type_t type, const void* data, size_t size);
 static void _interrupt_init(void);
 
-static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel);
+static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel, uint16_t adcDiv);
 
 static void _application_client_connect(void) {
 	packet_device_info_t info;
@@ -53,12 +53,11 @@ static void _application_init(void) {
 	_interrupt_init();
 	packet_init(_packet_receive);
 
-
 	HAL_ADC_Start_DMA(&hadc3, (uint32_t*) s_adc_samples, (DMA_BUFFER_SIZE * ADC_CHANNEL_COUNT));
 	HAL_TIM_Base_Start(&htim3);
 
 	config_init();
-	_timer_init(g_config.encoder_mode, g_config.encoder_channel);
+	_timer_init(g_config.encoder_mode, g_config.encoder_channel, g_config.adc_div);
 
 	server_init();
 	server_set_on_connect_callback(_application_client_connect);
@@ -146,8 +145,11 @@ static void _interrupt_init(void) {
 	HAL_ADC_RegisterCallback(&hadc3, HAL_ADC_CONVERSION_COMPLETE_CB_ID, _interrupt_dma_adc_full);
 }
 
-static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel) {
+static void _timer_init(encoder_capture_mode_t mode, encoder_channel_t channel, uint16_t adcDiv) {
 	HAL_TIM_IC_Stop_DMA(&htim2, TIM_CHANNEL_1);
+
+	if (adcDiv != 0)
+		TIM3->ARR = adcDiv - 1;
 
 	CLEAR_BIT(TIM2->CCER, TIM_CCER_CC1E);
 	CLEAR_BIT(TIM2->CR2, TIM_CR2_TI1S);
