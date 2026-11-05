@@ -113,11 +113,8 @@ namespace Device {
         if (this->m_speedSamples.size() >= this->m_speedSize) {
             std::vector<double> input(this->m_speedSamples.begin(), this->m_speedSamples.begin() + this->m_speedSize);
 
-            const double average = std::reduce(input.begin(), input.end()) / (float)input.size();
-            for (auto& elem : input)
-                elem -= average;
-
             this->m_speedOutput = _CalculateFFT(input);
+            this->m_speedOutput[0] = 0.0f;
             this->m_hasSpeedFFT = true;
         }
 
@@ -125,11 +122,8 @@ namespace Device {
             if (this->m_adcSamples[i].size() >= this->m_adcSize) {
                 std::vector<double> input(this->m_adcSamples[i].begin(), this->m_adcSamples[i].begin() + this->m_adcSize);
 
-                const double average = std::reduce(input.begin(), input.end()) / (float)input.size();
-                for (auto& elem : input)
-                    elem -= average;
-
                 this->m_adcOutput[i] = _CalculateFFT(input);
+                this->m_adcOutput[i][0] = 0.0f;
             }
         }
     }
@@ -218,6 +212,22 @@ namespace Device {
         this->m_parser.Feed(data);
     }
 
+    static uint32_t _GetADCResolution(const packet_adc_res_t res) {
+        switch(res) {
+            case ADC_RES_8:
+                return 0xFF;
+            case ADC_RES_10:
+                return 0x3FF;
+            case ADC_RES_12:
+                return 0xFFF;
+            case ADC_RES_14:
+                return 0x3FFF;
+            case ADC_RES_16:
+                return 0xFFFF;
+        }
+        return 0;
+    }
+
     static std::vector<uint32_t> _ProcessDeltas(const packet_header_t* header) {
         std::vector<uint32_t> deltas(DMA_HALF_BUFFER_SIZE, 0);
 
@@ -282,6 +292,8 @@ namespace Device {
             deviceInfo.clock = FromLittleEndian<uint32_t>(info->device.clock);
             deviceInfo.adc_num = info->device.adc_num;
             deviceInfo.adc_res = info->device.adc_res; 
+
+            this->m_adcResolution = _GetADCResolution((packet_adc_res_t) info->device.adc_res);
 
 		} break;
         case PACKET_TYPE_TIMER_DELTA: {
