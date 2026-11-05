@@ -78,7 +78,6 @@ protected:
     std::vector<double> m_adcOutput[ADC_CHANNEL_COUNT];
 
     bool m_hasSpeedFFT;
-
 };
 
 class Manager {

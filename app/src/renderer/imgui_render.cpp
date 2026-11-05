@@ -113,29 +113,35 @@ float ImGuiManager::RenderDeviceBar() {
         }
 
         if (ImGui::CollapsingHeader("ADC Configuration")) {
-            for(int i = 0; i < ADC_CHANNEL_COUNT; i++) {
-                if (ImGui::BeginTabBar(std::format("ADC%d##adcconf", i+1).c_str())) {
-                    auto& adcConf = config.adc_config[i];
-                    ImGui::Checkbox("Enable Mapping", (bool*)&adcConf.enabled);
-                    ImGui::SameLine();
-                    if (!adcConf.enabled)
-                        ImGui::BeginDisabled();
-                    
-                    ImGui::InputText("Unit", adcConf.unit, sizeof(adcConf.unit));
+            if(ImGui::BeginTabBar("##adcConf")) {
+                for(int i = 0; i < ADC_CHANNEL_COUNT; i++) {
+                    ImGui::PushID(i + 0x100);
+                    if (ImGui::BeginTabItem(std::format("ADC{}##adcconf", i+1).c_str())) {
 
-                    float maxVal = adcConf.max_val;
-                    float minVal = adcConf.min_val;
+                        auto& adcConf = config.adc_config[i];
+                        ImGui::Checkbox("Enable Mapping", (bool*)&adcConf.enabled);
+                        ImGui::SameLine();
+                        if (!adcConf.enabled)
+                            ImGui::BeginDisabled();
+                        
+                        ImGui::InputText("Unit", adcConf.unit, sizeof(adcConf.unit));
 
-                    ImGui::InputFloat("Max", &maxVal);
-                    ImGui::InputFloat("Min", &minVal);
+                        float maxVal = adcConf.max_val;
+                        float minVal = adcConf.min_val;
 
-                    adcConf.max_val = maxVal;
-                    adcConf.min_val = minVal;
+                        ImGui::InputFloat("Max", &maxVal);
+                        ImGui::InputFloat("Min", &minVal);
 
-                    if (!adcConf.enabled)
-                        ImGui::EndDisabled();
-                    ImGui::EndTabBar();
+                        adcConf.max_val = maxVal;
+                        adcConf.min_val = minVal;
+
+                        if (!adcConf.enabled)
+                            ImGui::EndDisabled();
+                        ImGui::EndTabItem();
+                    }
+                    ImGui::PopID();
                 }
+                ImGui::EndTabBar();
             }
 
         }
