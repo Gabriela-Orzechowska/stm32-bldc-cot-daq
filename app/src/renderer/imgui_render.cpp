@@ -82,6 +82,7 @@ float ImGuiManager::RenderDeviceBar() {
         if (TCP::ClientManager::Get().IsConnected()) {
             if (ImGui::Button("Disconnect")) {
                 TCP::ClientManager::Get().TryDisconnect();
+                device.EndCapture();
             }
         }
         else {
@@ -226,6 +227,7 @@ void ImGuiManager::RenderPlots(float y) {
             if(ImGui::BeginTabBar("##subplotbar")) {
                 if(ImGui::BeginTabItem("Speed##fftbar")) {
                     plotName = "Speed FFT";
+
                     mag = fft.GetSpeedFFT();
                     ImGui::EndTabItem();
                 }
@@ -233,7 +235,7 @@ void ImGuiManager::RenderPlots(float y) {
                 for(int i = 0; i < ADC_CHANNEL_COUNT; i++) {
                     ImGui::PushID(0x200 + i);
                     if(ImGui::BeginTabItem(std::format("ADC{}##fftbar", i+1).c_str())) {
-                        plotName = std::format("ADC{} FFT", i);
+                        plotName = std::format("ADC{} FFT", i + 1);
                         mag = fft.GetADCFFT(i);
                         adcChannel = i;
                         ImGui::EndTabItem();
@@ -252,14 +254,68 @@ void ImGuiManager::RenderPlots(float y) {
                 freq[i] = i * mult;
             }
 
-            if (adcChannel < 0)
-                ImGui::Text("Average speed: %f", fft.GetSpeedAverage());
+            if (adcChannel < 0) {
+                double mults = (60.0 * (double)device.m_deviceInfo.clock) / (4.0 * (double)device.m_deviceConfig.encoder_resolution);
+                ImGui::Text("Average speed: %f", mults / fft.GetSpeedAverage());
+            }
 
             if(ImPlot::BeginPlot(plotName.c_str(), ImVec2(-1, -1))) {
                 ImPlot::SetupAxes("Order", "Magnitude");
                 ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, 8.0);
 
                 ImPlot::PlotLine(plotName.c_str(), freq.data(), mag.data(), (int)mag.size());
+                ImPlot::PlotScatter(plotName.c_str(), freq.data(), mag.data(), (int)mag.size());
+
+                ImPlot::EndPlot();
+            }
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Time Plot")) {
+            ImGui::PushID(100);
+            std::vector<double> mag;
+            if(ImGui::BeginTabBar("##subplotbar")) {
+                if(ImGui::BeginTabItem("Speed##fftbar")) {
+                    plotName = "Speed FFT";
+
+                    mag = fft.GetSpeedPlot();
+                    ImGui::EndTabItem();
+                }
+
+                for(int i = 0; i < ADC_CHANNEL_COUNT; i++) {
+                    ImGui::PushID(0x200 + i);
+                    if(ImGui::BeginTabItem(std::format("ADC{}##fftbar", i+1).c_str())) {
+                        plotName = std::format("ADC{} FFT", i + 1);
+                        mag = fft.GetADCPlot(i);
+                        adcChannel = i;
+                        ImGui::EndTabItem();
+                    }
+                    ImGui::PopID();
+                }
+
+                ImGui::EndTabBar();
+            }
+            ImGui::PopID();
+
+            if (adcChannel > -1) resolution /= (float)device.GetConfig().adc_div;
+
+            std::vector<double> freq(mag.size(), 0);
+
+            const double mult = resolution / (freq.size() * 2.0);
+            for(size_t i = 0; i < freq.size(); i++) {
+                freq[i] = i * mult;
+            }
+
+            if (adcChannel < 0) {
+                //double mults = (60.0 * (double)device.m_deviceInfo.clock) / (4.0 * (double)device.m_deviceConfig.encoder_resolution);
+                ImGui::Text("Average speed: %f", fft.GetSpeedAverage());
+            }
+
+            if(ImPlot::BeginPlot(plotName.c_str(), ImVec2(-1, -1))) {
+                ImPlot::SetupAxes("Order", "Value");
+                ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, 8.0);
+
+                ImPlot::PlotLine(plotName.c_str(), freq.data(), mag.data(), (int)mag.size());
+                ImPlot::PlotScatter(plotName.c_str(), freq.data(), mag.data(), (int)mag.size());
 
                 ImPlot::EndPlot();
             }

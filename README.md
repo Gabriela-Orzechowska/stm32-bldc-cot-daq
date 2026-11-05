@@ -21,7 +21,7 @@ The firmware is a standard STM32CubeIDE 1.19 project.
 
 PC application allows for reading the live data, saving to the drive, basic analisis, and device configuration. 
 
-TODO: I will add a screenshot here once I get measurements again.
+![image](docs/app_image.png)
 
 ### Building
 The software is written in C++23 and build using CMake in `app` folder

@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <thread>
+#include <mutex>
 
 #define MAX_PATH 260
 
@@ -58,18 +59,20 @@ public:
         return m_adcSamples[i];
     }
 
-    inline const std::vector<double>& GetSpeedFFT() const { 
-        return m_speedOutput; 
+    inline const std::vector<double> GetSpeedFFT() const { 
+        std::lock_guard lock(m_mutex);
+        return std::vector<double>(m_speedOutput.begin(), m_speedOutput.end()); 
     }
-    inline const std::vector<double>& GetADCFFT(int i) const {
-        return m_adcOutput[i];
+    inline const std::vector<double> GetADCFFT(int i) const {
+        std::lock_guard lock(m_mutex);
+        return std::vector<double>(m_adcOutput[i].begin(), m_adcOutput[i].end()); 
     }
 
     inline double GetSpeedAverage() const {
         return m_speedAverage;
     }
 
-protected:
+private:
     size_t m_speedSize;
     size_t m_adcSize;
     size_t m_speedRevSize;
@@ -83,6 +86,7 @@ protected:
     std::vector<double> m_adcOutput[ADC_CHANNEL_COUNT];
 
     bool m_hasSpeedFFT;
+    mutable std::mutex m_mutex;
 };
 
 class Manager {

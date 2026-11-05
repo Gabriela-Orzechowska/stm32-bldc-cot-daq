@@ -80,6 +80,7 @@ namespace Device {
     void FFTHandler::ParseSpeed(const std::vector<double>& data) {
         if (this->m_speedSize == 0) throw std::invalid_argument("FFT size not set");
 
+        std::lock_guard lock(m_mutex);
         this->m_speedSamples.insert(this->m_speedSamples.end(), data.begin(), data.end());
         while (this->m_speedSamples.size() > (this->m_speedSize + this->m_adcRevSize)) {
             this->m_speedSamples.erase(this->m_speedSamples.begin(), this->m_speedSamples.begin() + this->m_adcRevSize);
@@ -114,12 +115,13 @@ namespace Device {
             std::vector<double> input(this->m_speedSamples.begin(), this->m_speedSamples.begin() + this->m_speedSize);
 
             double sum = std::reduce(input.begin(), input.end());
-            this->m_speedAverage = sum / (float)input.size();
+            double average = sum / (float)input.size();
+            for (auto& elem : input)
+                elem -= average;
 
-            for(auto& elem : input) {
-                elem -= this->m_speedAverage;
-            }
+            this->m_speedAverage = average;
 
+            std::lock_guard lock(m_mutex);
             this->m_speedOutput = _CalculateFFT(input);
             this->m_hasSpeedFFT = true;
         }
@@ -128,18 +130,20 @@ namespace Device {
             if (this->m_adcSamples[i].size() >= this->m_adcSize) {
                 std::vector<double> input(this->m_adcSamples[i].begin(), this->m_adcSamples[i].begin() + this->m_adcSize);
 
+                std::lock_guard lock(m_mutex);
                 this->m_adcOutput[i] = _CalculateFFT(input);
                 this->m_adcOutput[i][0] = 0.0f;
             }
         }
     }
 
-    static std::vector<double> _CalculateSpeed(const std::vector<uint32_t>& samples, uint32_t clockSpeed, uint32_t sampleCount) {
+    static std::vector<double> _CalculateSpeed(const std::vector<uint32_t> samples, uint32_t clockSpeed, uint32_t sampleCount) {
         std::vector<double> output(samples.size(), 0);
 
-        const double mult = (60.0 * clockSpeed) / (4.0 * sampleCount);
+        // Something broke so gonna fix later
+        const double mult = (60.0 * (double)clockSpeed) / (4.0 * (double)sampleCount);
         for(size_t i = 0; i < samples.size(); i++) {
-            output[i] = mult / samples[i];
+            output[i] = mult / (double)samples[i];
         }
 
         return output;
@@ -155,8 +159,8 @@ namespace Device {
 
         this->m_fft.SetupFFT(
             this->m_deviceConfig.encoder_resolution, 
-            this->m_deviceConfig.encoder_resolution / 3, 
-            10
+            this->m_deviceConfig.encoder_resolution / this->m_deviceConfig.adc_div, 
+            20
         );
 
         this->m_isCapturing = true;
@@ -167,7 +171,7 @@ namespace Device {
         this->m_fftThread = std::thread([this] {
             for(;;) {
                 if (!this->m_isCapturing) return;
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
                 this->m_fft.CalculateFFT();
             }
         });
@@ -315,6 +319,7 @@ namespace Device {
             if (!this->m_isCapturing) break;
 
             auto ret = _ProcessDeltas(header);
+
             auto speed = _CalculateSpeed(ret, m_deviceInfo.clock, m_deviceConfig.encoder_resolution);
             this->m_fft.ParseSpeed(speed);
             this->m_timerValueFile.write((const char*)(ret.data()), ret.size() * sizeof(uint32_t));
