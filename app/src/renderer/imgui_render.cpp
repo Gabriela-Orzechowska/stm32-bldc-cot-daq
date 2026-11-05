@@ -110,9 +110,19 @@ float ImGuiManager::RenderDeviceBar() {
         if (configMode != 2) {
             ImGui::SameLine();
             ImGui::Combo("Channel", &configChannel, "A\0B\0\0");
+        } 
+        else {
+            ImGui::SameLine();
+            bool interlace = config.interlace;
+            ImGui::Checkbox("Channel Interlacing", &interlace);
+            config.interlace = interlace;
         }
 
         if (ImGui::CollapsingHeader("ADC Configuration")) {
+            int divider = config.adc_div;
+            ImGui::InputInt("ADC Resolution Divider", &divider);
+            config.adc_div = divider;
+
             if(ImGui::BeginTabBar("##adcConf")) {
                 for(int i = 0; i < ADC_CHANNEL_COUNT; i++) {
                     ImGui::PushID(i + 0x100);
@@ -221,13 +231,14 @@ void ImGuiManager::RenderPlots(float y) {
                 }
 
                 for(int i = 0; i < ADC_CHANNEL_COUNT; i++) {
-                    if(ImGui::BeginTabItem(std::format("ADC%d##fftbar", i+1).c_str())) {
-                        plotName = std::format("ADC%d FFT", i);
+                    ImGui::PushID(0x200 + i);
+                    if(ImGui::BeginTabItem(std::format("ADC{}##fftbar", i+1).c_str())) {
+                        plotName = std::format("ADC{} FFT", i);
                         mag = fft.GetADCFFT(i);
                         adcChannel = i;
                         ImGui::EndTabItem();
                     }
-
+                    ImGui::PopID();
                 }
                 ImGui::EndTabBar();
             }
@@ -241,67 +252,20 @@ void ImGuiManager::RenderPlots(float y) {
                 freq[i] = i * mult;
             }
 
+            if (adcChannel < 0)
+                ImGui::Text("Average speed: %f", fft.GetSpeedAverage());
+
             if(ImPlot::BeginPlot(plotName.c_str(), ImVec2(-1, -1))) {
                 ImPlot::SetupAxes("Order", "Magnitude");
                 ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, 8.0);
 
-                ImPlot::PlotScatter(plotName.c_str(), freq.data(), mag.data(), (int)mag.size());
                 ImPlot::PlotLine(plotName.c_str(), freq.data(), mag.data(), (int)mag.size());
 
                 ImPlot::EndPlot();
             }
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Time Plot")) {
-            std::vector<double> y1;
-            if(ImGui::BeginTabBar("##subplotbar")) {
-                if(ImGui::BeginTabItem("Speed")) {
-                    plotName = "Speed";
-                    y1 = fft.GetSpeedPlot();
-                    ImGui::EndTabItem();
-                }
-                if(ImGui::BeginTabItem("ADC1")) {
-                    plotName = "ADC1";
-                    y1 = fft.GetADCPlot(0);
-                    ImGui::EndTabItem();
-                }
-                if(ImGui::BeginTabItem("ADC2")) {
-                    plotName = "ADC2";
-                    y1 = fft.GetADCPlot(1);
-                    ImGui::EndTabItem();
-                }
-                if(ImGui::BeginTabItem("ADC3")) {
-                    plotName = "ADC3";
-                    y1 = fft.GetADCPlot(2);
-                    ImGui::EndTabItem();
-                }
-                if(ImGui::BeginTabItem("ADC4")) {
-                    plotName = "ADC4";
-                    y1 = fft.GetADCPlot(3);
-                    ImGui::EndTabItem();
-                }
-                ImGui::EndTabBar();
-            }
-
-            
-
-            std::vector<double> x1(y1.size(), 0);
-            const double mult = resolution / (x1.size() * 2.0);
-            for(size_t i = 0; i < x1.size(); i++) {
-                x1[i] = i * mult;
-            }
-
-            if(ImPlot::BeginPlot(plotName.c_str(), ImVec2(-1, -1))) {
-                ImPlot::SetupAxes("Time", "Value");
-                ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, 8.0);
-
-                ImPlot::PlotLine(plotName.c_str(), x1.data(), y1.data(), (int)y1.size());
-
-                ImPlot::EndPlot();
-            }
-            ImGui::EndTabItem();
-        }
-
+        ImGui::EndTabBar();
     }
 
     ImGui::End();

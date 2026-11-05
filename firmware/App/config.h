@@ -18,7 +18,8 @@ typedef struct __attribute((packed)) {
 	uint16_t encoder_resolution;
 
 	uint8_t adc_div;
-	uint8_t reserved[3];
+	uint8_t interlace;
+	uint8_t reserved[2];
 
 	config_adc_setup_t adc_config[ADC_CHANNEL_COUNT];
 

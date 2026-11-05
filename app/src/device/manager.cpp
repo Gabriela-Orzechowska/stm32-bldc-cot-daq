@@ -113,8 +113,14 @@ namespace Device {
         if (this->m_speedSamples.size() >= this->m_speedSize) {
             std::vector<double> input(this->m_speedSamples.begin(), this->m_speedSamples.begin() + this->m_speedSize);
 
+            double sum = std::reduce(input.begin(), input.end());
+            this->m_speedAverage = sum / (float)input.size();
+
+            for(auto& elem : input) {
+                elem -= this->m_speedAverage;
+            }
+
             this->m_speedOutput = _CalculateFFT(input);
-            this->m_speedOutput[0] = 0.0f;
             this->m_hasSpeedFFT = true;
         }
 
@@ -161,7 +167,7 @@ namespace Device {
         this->m_fftThread = std::thread([this] {
             for(;;) {
                 if (!this->m_isCapturing) return;
-                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 this->m_fft.CalculateFFT();
             }
         });
@@ -276,7 +282,16 @@ namespace Device {
             deviceConfig.encoder_mode       = config->config.encoder_mode;
             deviceConfig.encoder_channel    = config->config.encoder_channel;
             deviceConfig.encoder_resolution = FromLittleEndian<uint16_t>(config->config.encoder_resolution);
+            deviceConfig.adc_div            = config->config.adc_div;
+            deviceConfig.interlace          = config->config.interlace;
             deviceConfig.crc                = FromLittleEndian<uint32_t>(config->config.crc);
+
+            for (int i = 0; i < ADC_CHANNEL_COUNT; i++) {
+                deviceConfig.adc_config[i].enabled = config->config.adc_config[i].enabled;
+                deviceConfig.adc_config[i].max_val = FromLittleEndianFloat(config->config.adc_config[i].max_val);
+                deviceConfig.adc_config[i].min_val = FromLittleEndianFloat(config->config.adc_config[i].min_val);
+                memcpy(deviceConfig.adc_config[i].unit, config->config.adc_config[i].unit, 3);
+            }
 			// clang-format on
         } break;
         case PACKET_TYPE_DEVICE_INFO: {
@@ -331,6 +346,16 @@ namespace Device {
         packet.config.encoder_mode = deviceConfig.encoder_mode;
         packet.config.encoder_channel = deviceConfig.encoder_channel;
         packet.config.encoder_resolution = ToLittleEndian<uint16_t>(deviceConfig.encoder_resolution);
+        packet.config.adc_div = deviceConfig.adc_div;
+        packet.config.interlace = deviceConfig.interlace;
+
+        for (int i = 0; i < ADC_CHANNEL_COUNT; i++) {
+            packet.config.adc_config[i].enabled = deviceConfig.adc_config[i].enabled;
+            packet.config.adc_config[i].max_val = ToLittleEndianFloat(deviceConfig.adc_config[i].max_val);
+            packet.config.adc_config[i].min_val = ToLittleEndianFloat(deviceConfig.adc_config[i].min_val);
+            memcpy(packet.config.adc_config[i].unit, deviceConfig.adc_config[i].unit, 3);
+        }
+
 		packet.config.crc = ToLittleEndian<uint32_t>(CRC32::MPEG_2::calc((const uint8_t*)&packet.config, PACKET_RAW_SIZE(config_t)));
 
         packet.crc = FromLittleEndian<uint32_t>(CRC32::MPEG_2::calc((const uint8_t*)&packet, PACKET_RAW_SIZE(packet_config_t)));

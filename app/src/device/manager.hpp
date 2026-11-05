@@ -65,6 +65,10 @@ public:
         return m_adcOutput[i];
     }
 
+    inline double GetSpeedAverage() const {
+        return m_speedAverage;
+    }
+
 protected:
     size_t m_speedSize;
     size_t m_adcSize;
@@ -73,6 +77,7 @@ protected:
 
     std::vector<double> m_speedSamples;
     std::vector<double> m_speedOutput;
+    double m_speedAverage;
 
     std::vector<double> m_adcSamples[ADC_CHANNEL_COUNT];
     std::vector<double> m_adcOutput[ADC_CHANNEL_COUNT];

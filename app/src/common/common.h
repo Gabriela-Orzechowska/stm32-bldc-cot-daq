@@ -39,5 +39,26 @@ constexpr T FromLittleEndian(const uint8_t* p) {
     return value;
 }
 
+constexpr float ToLittleEndianFloat(float value)
+{
+    if constexpr (std::endian::native == std::endian::little)
+        return value;
+    else {
+        union {
+            float v;
+            uint32_t g;
+        } meow;
+
+        meow.v = value;
+        meow.g = std::byteswap(meow.g);
+        return meow.v;
+    }
+}
+
+constexpr float FromLittleEndianFloat(float value) {
+    return ToLittleEndianFloat(value);
+}
+
+
 
 #endif
