@@ -271,19 +271,24 @@ namespace Device {
         } break;
         case PACKET_TYPE_DEVICE_INFO: {
 			const packet_device_info_t* info = (const packet_device_info_t*)header;
+            auto& deviceInfo = this->m_deviceInfo;
 
             char name[5] = { 0 };
-			uint32_t rawName = std::byteswap(FromLittleEndian<uint32_t>(info->device_name));
-
+			uint32_t rawName = std::byteswap(FromLittleEndian<uint32_t>(info->device.name));
             memcpy(name, &rawName, sizeof(uint32_t));
+
 			this->m_deviceName =  name;
-			this->m_deviceClock = FromLittleEndian<uint32_t>(info->device_clock);
+			
+            deviceInfo.clock = FromLittleEndian<uint32_t>(info->device.clock);
+            deviceInfo.adc_num = info->device.adc_num;
+            deviceInfo.adc_res = info->device.adc_res; 
+
 		} break;
         case PACKET_TYPE_TIMER_DELTA: {
             if (!this->m_isCapturing) break;
 
             auto ret = _ProcessDeltas(header);
-            auto speed = _CalculateSpeed(ret, m_deviceClock, m_deviceConfig.encoder_resolution);
+            auto speed = _CalculateSpeed(ret, m_deviceInfo.clock, m_deviceConfig.encoder_resolution);
             this->m_fft.ParseSpeed(speed);
             this->m_timerValueFile.write((const char*)(ret.data()), ret.size() * sizeof(uint32_t));
         } break;

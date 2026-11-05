@@ -1,6 +1,7 @@
 #include "packet.h"
 #include "crc.h"
 #include "tusb.h"
+#include "adc.h"
 
 void packet_adc_init(packet_header_t* header) {
 	header->magic = PACKET_HEADER_MAGIC;
@@ -59,6 +60,24 @@ void packet_config_init(packet_config_t *packet) {
 			PACKET_RAW_SIZE(packet_config_t));
 }
 
+static packet_adc_res_t _get_adc_res(void) {
+	switch(hadc3.Init.Resolution) {
+	case ADC_RESOLUTION_8B:
+		return ADC_RES_8;
+	case ADC_RESOLUTION_10B:
+		return ADC_RES_10;
+	case ADC_RESOLUTION_12B:
+	case ADC_RESOLUTION_12B_OPT:
+		return ADC_RES_12;
+	case ADC_RESOLUTION_14B:
+	case ADC_RESOLUTION_14B_OPT:
+		return ADC_RES_14;
+	case ADC_RESOLUTION_16B:
+		return ADC_RES_16;
+	}
+	return ADC_RES_12;
+}
+
 void packet_device_info_init(packet_device_info_t *packet) {
 	memset(packet, 0, sizeof(packet_device_info_t));
 
@@ -66,11 +85,13 @@ void packet_device_info_init(packet_device_info_t *packet) {
 	packet->header.length = sizeof(packet_device_info_t);
 	packet->header.type = PACKET_TYPE_DEVICE_INFO;
 
-	packet->device_name = 'H753';
-	packet->device_clock = HAL_RCC_GetPCLK2Freq();
+	packet->device.name = 'H753';
+	packet->device.clock = HAL_RCC_GetPCLK2Freq();
 	if ((RCC->D2CFGR & RCC_D2CFGR_D2PPRE2) != RCC_D2CFGR_D2PPRE2_DIV1) {
-		packet->device_clock *= 2U;
+		packet->device.clock *= 2U;
 	}
+	packet->device.adc_res = _get_adc_res();
+	packet->device.adc_num = hadc3.Init.NbrOfConversion;
 
 	packet->crc = HAL_CRC_Calculate(&hcrc, (uint32_t*) packet,
 			PACKET_RAW_SIZE(packet_device_info_t));

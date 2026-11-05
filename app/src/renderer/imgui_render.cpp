@@ -122,8 +122,15 @@ float ImGuiManager::RenderDeviceBar() {
                         ImGui::BeginDisabled();
                     
                     ImGui::InputText("Unit", adcConf.unit, sizeof(adcConf.unit));
-                    ImGui::InputFloat("Max", &adcConf.max_val);
-                    ImGui::InputFloat("Min", &adcConf.min_val);
+
+                    float maxVal = adcConf.max_val;
+                    float minVal = adcConf.min_val;
+
+                    ImGui::InputFloat("Max", &maxVal);
+                    ImGui::InputFloat("Min", &minVal);
+
+                    adcConf.max_val = maxVal;
+                    adcConf.min_val = minVal;
 
                     if (!adcConf.enabled)
                         ImGui::EndDisabled();
@@ -278,11 +285,11 @@ void ImGuiManager::RenderPlots(float y) {
                 x1[i] = i * mult;
             }
 
-            if(ImPlot::BeginPlot(plotName, ImVec2(-1, -1))) {
+            if(ImPlot::BeginPlot(plotName.c_str(), ImVec2(-1, -1))) {
                 ImPlot::SetupAxes("Time", "Value");
                 ImPlot::SetupAxisLimits(ImAxis_X1, 0.0, 8.0);
 
-                ImPlot::PlotLine(plotName, x1.data(), y1.data(), (int)y1.size());
+                ImPlot::PlotLine(plotName.c_str(), x1.data(), y1.data(), (int)y1.size());
 
                 ImPlot::EndPlot();
             }

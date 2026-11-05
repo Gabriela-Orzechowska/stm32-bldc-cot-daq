@@ -107,7 +107,8 @@ public:
     inline config_t& GetConfig() { return m_deviceConfig; }
 
 	inline const std::string& GetDeviceName() const { return m_deviceName; }
-	inline uint32_t GetDeviceClock() const { return m_deviceClock; }
+	inline uint32_t GetDeviceClock() const { return m_deviceInfo.clock; }
+    inline const device_conf_t& GetDeviceInfo() const { return m_deviceInfo; }
 
 private:
     void _ProcessPacket(const packet_header_t *header);
@@ -129,7 +130,8 @@ private:
     std::filesystem::path m_outputPath;
     config_t m_deviceConfig;
     std::string m_deviceName = "";
-	uint32_t m_deviceClock = 0;
+    device_conf_t m_deviceInfo;
+    uint32_t m_adcResolution;
 
     std::filesystem::path m_timerValuePath;
     std::ofstream m_timerValueFile;
