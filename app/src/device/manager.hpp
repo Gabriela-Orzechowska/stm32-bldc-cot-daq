@@ -53,19 +53,19 @@ public:
     inline bool HasSpeedFFT() const { return m_hasSpeedFFT; }
 
     inline const std::vector<double> GetSpeedPlot() const {
-        return m_speedSamples;
+        return m_speedPlot;
     }
     inline const std::vector<double> GetADCPlot(int i) const {
-        return m_adcSamples[i];
+        return m_adcPlot[i];
     }
 
-    inline const std::vector<double> GetSpeedFFT() const { 
+    inline const std::vector<double>& GetSpeedFFT() const { 
         std::lock_guard lock(m_mutex);
-        return std::vector<double>(m_speedOutput.begin(), m_speedOutput.end()); 
+        return m_speedOutput;
     }
-    inline const std::vector<double> GetADCFFT(int i) const {
+    inline const std::vector<double>& GetADCFFT(int i) const {
         std::lock_guard lock(m_mutex);
-        return std::vector<double>(m_adcOutput[i].begin(), m_adcOutput[i].end()); 
+        return m_adcOutput[i];
     }
 
     inline double GetSpeedAverage() const {
@@ -80,10 +80,12 @@ private:
 
     std::vector<double> m_speedSamples;
     std::vector<double> m_speedOutput;
+    std::vector<double> m_speedPlot;
     double m_speedAverage;
 
     std::vector<double> m_adcSamples[ADC_CHANNEL_COUNT];
     std::vector<double> m_adcOutput[ADC_CHANNEL_COUNT];
+    std::vector<double> m_adcPlot[ADC_CHANNEL_COUNT];
 
     bool m_hasSpeedFFT;
     mutable std::mutex m_mutex;
@@ -93,7 +95,7 @@ class Manager {
 public:
     friend class Render::ImGuiManager;
 
-    Manager(){}
+    Manager() : m_rotationsToAnalise(20) {}
     ~Manager(){
         this->EndCapture();
     }
@@ -134,6 +136,7 @@ private:
     PacketParser m_parser;
     FFTHandler m_fft;
     bool m_isCapturing;
+    int m_rotationsToAnalise;
 
     std::filesystem::path m_outputPath;
     config_t m_deviceConfig;

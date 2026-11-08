@@ -82,7 +82,7 @@ namespace Device {
 
         std::lock_guard lock(m_mutex);
         this->m_speedSamples.insert(this->m_speedSamples.end(), data.begin(), data.end());
-        while (this->m_speedSamples.size() > (this->m_speedSize + this->m_adcRevSize)) {
+        while (this->m_speedSamples.size() > (this->m_speedSize + this->m_speedRevSize)) {
             this->m_speedSamples.erase(this->m_speedSamples.begin(), this->m_speedSamples.begin() + this->m_adcRevSize);
         }
     }
@@ -116,13 +116,15 @@ namespace Device {
 
             double sum = std::reduce(input.begin(), input.end());
             double average = sum / (float)input.size();
-            for (auto& elem : input)
-                elem -= average;
+
 
             this->m_speedAverage = average;
 
             std::lock_guard lock(m_mutex);
             this->m_speedOutput = _CalculateFFT(input);
+            this->m_speedOutput[0] = 0.0f;
+
+            this->m_speedPlot = input;
             this->m_hasSpeedFFT = true;
         }
 
@@ -133,6 +135,8 @@ namespace Device {
                 std::lock_guard lock(m_mutex);
                 this->m_adcOutput[i] = _CalculateFFT(input);
                 this->m_adcOutput[i][0] = 0.0f;
+
+                this->m_adcPlot[i] = input;
             }
         }
     }
@@ -160,7 +164,7 @@ namespace Device {
         this->m_fft.SetupFFT(
             this->m_deviceConfig.encoder_resolution, 
             this->m_deviceConfig.encoder_resolution / this->m_deviceConfig.adc_div, 
-            20
+            this->m_rotationsToAnalise
         );
 
         this->m_isCapturing = true;
@@ -171,7 +175,7 @@ namespace Device {
         this->m_fftThread = std::thread([this] {
             for(;;) {
                 if (!this->m_isCapturing) return;
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 this->m_fft.CalculateFFT();
             }
         });
@@ -214,6 +218,7 @@ namespace Device {
         if (user.has_value()) {
             this->m_outputPath = user.value() / "cot-daq-data";
             std::filesystem::create_directory(this->m_outputPath);
+            this->UpdatePaths();
         }
 
     }

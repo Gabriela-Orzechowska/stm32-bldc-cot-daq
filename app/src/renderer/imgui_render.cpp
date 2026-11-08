@@ -176,11 +176,16 @@ float ImGuiManager::RenderDeviceBar() {
             }
         }
 
-        if (device.m_isCapturing)
-            ImGui::EndDisabled();
 
         ImGui::SameLine();
         ImGui::Text("%s", device.m_outputPath.c_str());
+
+        ImGui::InputInt("Rotations to analyze", &device.m_rotationsToAnalise, 1, 10);
+        if (device.m_rotationsToAnalise < 1)
+            device.m_rotationsToAnalise = 1;
+
+        if (device.m_isCapturing)
+            ImGui::EndDisabled();
 
         if (device.m_outputPath != "") {
             if (!device.m_isCapturing && ImGui::Button("Start Capture")) {
