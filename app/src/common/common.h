@@ -8,6 +8,13 @@
 #define DMA_HALF_BUFFER_SIZE (DMA_BUFFER_SIZE / 2)
 #define ADC_CHANNEL_COUNT (4)
 
+#ifdef _MSC_VER
+#  define PACKED_STRUCT(name) \
+    __pragma(pack(push, 1)) struct name __pragma(pack(pop))
+#elif defined(__GNUC__)
+#  define PACKED_STRUCT(name) struct __attribute__((packed)) name
+#endif
+
 #ifdef __cplusplus
 
 #include <bit>

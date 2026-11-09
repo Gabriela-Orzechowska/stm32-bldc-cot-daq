@@ -178,7 +178,12 @@ float ImGuiManager::RenderDeviceBar() {
 
 
         ImGui::SameLine();
+
+#ifdef _WIN32
+        ImGui::Text("%ls", device.m_outputPath.c_str());
+#else
         ImGui::Text("%s", device.m_outputPath.c_str());
+#endif
 
         ImGui::InputInt("Rotations to analyze", &device.m_rotationsToAnalise, 1, 10);
         if (device.m_rotationsToAnalise < 1)
@@ -254,14 +259,13 @@ void ImGuiManager::RenderPlots(float y) {
 
             std::vector<double> freq(mag.size(), 0);
 
-            const double mult = resolution / (freq.size() * 2.0);
+            const double mult = resolution / ((freq.size() - 1) * 2.0);
             for(size_t i = 0; i < freq.size(); i++) {
                 freq[i] = i * mult;
             }
 
             if (adcChannel < 0) {
-                double mults = (60.0 * (double)device.m_deviceInfo.clock) / (4.0 * (double)device.m_deviceConfig.encoder_resolution);
-                ImGui::Text("Average speed: %f", mults / fft.GetSpeedAverage());
+                ImGui::Text("Average speed: %f", fft.GetSpeedAverage());
             }
 
             if(ImPlot::BeginPlot(plotName.c_str(), ImVec2(-1, -1))) {
@@ -279,7 +283,7 @@ void ImGuiManager::RenderPlots(float y) {
             ImGui::PushID(100);
             std::vector<double> mag;
             if(ImGui::BeginTabBar("##subplotbar")) {
-                if(ImGui::BeginTabItem("Speed##fftbar")) {
+                if(ImGui::BeginTabItem("Speed##timeplot")) {
                     plotName = "Speed FFT";
 
                     mag = fft.GetSpeedPlot();
@@ -288,8 +292,8 @@ void ImGuiManager::RenderPlots(float y) {
 
                 for(int i = 0; i < ADC_CHANNEL_COUNT; i++) {
                     ImGui::PushID(0x200 + i);
-                    if(ImGui::BeginTabItem(std::format("ADC{}##fftbar", i+1).c_str())) {
-                        plotName = std::format("ADC{} FFT", i + 1);
+                    if(ImGui::BeginTabItem(std::format("ADC{}##timeplot", i+1).c_str())) {
+                        plotName = std::format("ADC{}", i + 1);
                         mag = fft.GetADCPlot(i);
                         adcChannel = i;
                         ImGui::EndTabItem();
@@ -305,13 +309,12 @@ void ImGuiManager::RenderPlots(float y) {
 
             std::vector<double> freq(mag.size(), 0);
 
-            const double mult = resolution / (freq.size() * 2.0);
+            const double mult = 1.0 / resolution;
             for(size_t i = 0; i < freq.size(); i++) {
                 freq[i] = i * mult;
             }
 
             if (adcChannel < 0) {
-                //double mults = (60.0 * (double)device.m_deviceInfo.clock) / (4.0 * (double)device.m_deviceConfig.encoder_resolution);
                 ImGui::Text("Average speed: %f", fft.GetSpeedAverage());
             }
 

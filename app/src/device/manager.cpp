@@ -145,7 +145,7 @@ namespace Device {
         std::vector<double> output(samples.size(), 0);
 
         // Something broke so gonna fix later
-        const double mult = (60.0 * (double)clockSpeed) / (4.0 * (double)sampleCount);
+        const double mult = (60.0 * (double)clockSpeed) / ((double)sampleCount);
         for(size_t i = 0; i < samples.size(); i++) {
             output[i] = mult / (double)samples[i];
         }

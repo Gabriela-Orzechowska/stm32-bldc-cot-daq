@@ -3,14 +3,14 @@
 
 #define CONFIG_MAGIC 0x434F4E46UL
 
-typedef struct __attribute((packed)) {
+typedef PACKED_STRUCT() {
 	float min_val;
 	float max_val;
 	char unit[3];
 	uint8_t enabled;
 } config_adc_setup_t;
 
-typedef struct __attribute((packed)) {
+typedef PACKED_STRUCT() {
 	uint32_t magic;
 
 	uint8_t encoder_mode;
